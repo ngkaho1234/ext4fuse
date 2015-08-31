@@ -53,7 +53,7 @@ static size_t first_read(struct ext4_inode *inode, char *buf, size_t size, off_t
     if (size == 0) return 0;
     if (start_block_off == 0) return 0;
 
-    uint64_t start_pblock = inode_get_data_pblock(inode, start_lblock, NULL);
+    uint64_t start_pblock = inode_get_data_pblock(inode, start_lblock, NULL, 0);
 
     /* Check if all the read request lays on the same block */
     if (start_lblock == end_lblock) {
