@@ -71,7 +71,6 @@ static size_t first_read(struct ext4_inode *inode, char *buf, size_t size, off_t
 int op_read(const char *path, char *buf, size_t size, off_t offset,
             struct fuse_file_info *fi)
 {
-    size_t un_offset = (size_t)offset;
     struct ext4_inode inode;
     size_t ret = 0;
     uint32_t extent_len;
@@ -79,20 +78,20 @@ int op_read(const char *path, char *buf, size_t size, off_t offset,
     /* Not sure if this is possible at all... */
     ASSERT(offset >= 0);
 
-    DEBUG("read(%s, buf, %zd, %zd, fi->fh=%d)", path, size, un_offset, fi->fh);
+    DEBUG("read(%s, buf, %zd, %llu, fi->fh=%d)", path, size, offset, fi->fh);
     int inode_get_ret = inode_get_by_number(fi->fh, &inode);
 
     if (inode_get_ret < 0) {
         return inode_get_ret;
     }
 
-    size = truncate_size(&inode, size, un_offset);
-    ret = first_read(&inode, buf, size, un_offset);
+    size = truncate_size(&inode, size, offset);
+    ret = first_read(&inode, buf, size, offset);
 
     buf += ret;
-    un_offset += ret;
+    offset += ret;
 
-    for (unsigned int lblock = un_offset / BLOCK_SIZE; size > ret; lblock += extent_len) {
+    for (unsigned int lblock = offset / BLOCK_SIZE; size > ret; lblock += extent_len) {
         uint64_t pblock = inode_get_data_pblock(&inode, lblock, &extent_len, 0);
         size_t bytes;
 

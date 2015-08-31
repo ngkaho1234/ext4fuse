@@ -154,7 +154,6 @@ static int sync_dirty_buffer(struct buffer_head *bh);
 
 void bdev_free(struct block_device *bdev)
 {
-	void *ret;
 	struct rb_node *node;
 	
 	while (!list_empty(&bdev->bd_bh_dirty)) {

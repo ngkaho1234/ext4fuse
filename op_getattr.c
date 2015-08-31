@@ -31,7 +31,7 @@ int op_getattr(const char *path, struct stat *stbuf)
 
     DEBUG("getattr done");
 
-    stbuf->st_mode = inode.i_mode & ~0222;
+    stbuf->st_mode = inode.i_mode;
     stbuf->st_nlink = inode.i_links_count;
     stbuf->st_size = inode_get_size(&inode);
     stbuf->st_blocks = inode.i_blocks_lo;

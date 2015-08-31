@@ -33,10 +33,10 @@ struct disk_ctx {
 int disk_open(const char *path);
 int disk_get_fd();
 int __disk_read(off_t where, size_t size, void *p, const char *func, int line);
-int __disk_write(off_t where, size_t size, void *p, const char *func, int line);
+int __disk_write(off_t where, size_t size, const void *p, const char *func, int line);
 
 int disk_ctx_create(struct disk_ctx *ctx, off_t where, size_t size, uint32_t len);
 int __disk_ctx_read(struct disk_ctx *ctx, size_t size, void *p, const char *func, int line);
-int __disk_ctx_write(struct disk_ctx *ctx, size_t size, void *p, const char *func, int line);
+int __disk_ctx_write(struct disk_ctx *ctx, size_t size, const void *p, const char *func, int line);
 
 #endif

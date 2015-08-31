@@ -5,6 +5,7 @@
 
 #include "types/ext4_inode.h"
 #include "types/ext4_dentry.h"
+#include "inode_in-memory.h"
 
 struct inode_dir_ctx {
     uint32_t lblock;        /* Currently buffered lblock */
@@ -16,7 +17,7 @@ static inline uint64_t inode_get_size(struct ext4_inode *inode)
     return ((uint64_t)inode->i_size_high << 32) | inode->i_size_lo;
 }
 
-uint64_t inode_get_data_pblock(struct ext4_inode *inode, uint32_t lblock, uint32_t *extent_len, int create);
+uint64_t inode_get_data_pblock(struct ext4_inode *inode, uint32_t lblock, uint32_t *extent_len, uint32_t create_inode);
 
 struct inode_dir_ctx *inode_dir_ctx_get(void);
 void inode_dir_ctx_put(struct inode_dir_ctx *);

@@ -84,7 +84,7 @@ static int pread_wrapper(int disk_fd, void *p, size_t size, off_t where)
 #endif
 }
 
-static int pwrite_wrapper(int disk_fd, void *p, size_t size, off_t where)
+static int pwrite_wrapper(int disk_fd, const void *p, size_t size, off_t where)
 {
 #if defined(__FreeBSD__) && !defined(__APPLE__)
     /* FreeBSD needs to read aligned whole blocks.
@@ -175,7 +175,7 @@ int __disk_read(off_t where, size_t size, void *p, const char *func, int line)
     return pread_ret;
 }
 
-int __disk_write(off_t where, size_t size, void *p, const char *func, int line)
+int __disk_write(off_t where, size_t size, const void *p, const char *func, int line)
 {
     static pthread_mutex_t write_lock = PTHREAD_MUTEX_INITIALIZER;
     ssize_t pwrite_ret;
@@ -227,7 +227,7 @@ int __disk_ctx_read(struct disk_ctx *ctx, size_t size, void *p, const char *func
     return ret;
 }
 
-int __disk_ctx_write(struct disk_ctx *ctx, size_t size, void *p, const char *func, int line)
+int __disk_ctx_write(struct disk_ctx *ctx, size_t size, const void *p, const char *func, int line)
 {
     int ret = 0;
 

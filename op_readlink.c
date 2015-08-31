@@ -29,7 +29,7 @@ static int get_link_dest(struct ext4_inode *inode, char *buf, size_t bufsize)
         /* Link destination fits in inode */
         memcpy(buf, inode->i_block, inode_size);
     } else {
-        uint64_t pblock = inode_get_data_pblock(inode, 0, NULL);
+        uint64_t pblock = inode_get_data_pblock(inode, 0, NULL, 0);
         char *block_data = malloc(super_block_size());
         disk_read_block(pblock, (uint8_t *)block_data);
         strncpy(buf, block_data, bufsize - 1);

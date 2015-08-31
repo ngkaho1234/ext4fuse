@@ -32,7 +32,6 @@ struct buffer_head *fs_bread(ext4_fsblk_t block, int *ret)
 	assert(block_device);
 	bh = sb_getblk(block_device->bd_super, block);
 	err = bh_submit_read(bh);
-out:
 	if (ret)
 		*ret = err;
 	if (bh)
@@ -47,7 +46,6 @@ struct buffer_head *fs_bwrite(ext4_fsblk_t block, int *ret)
 	struct buffer_head *bh;
 	assert(block_device);
 	bh = sb_getblk(block_device->bd_super, block);
-out:
 	if (ret)
 		*ret = err;
 	if (bh)
