@@ -16,7 +16,7 @@
 
 #include "dcache.h"
 #include "disk.h"
-#include "extents.h"
+#include "extents/extents.h"
 #include "inode.h"
 #include "logging.h"
 #include "super.h"
@@ -72,7 +72,7 @@ uint64_t inode_get_data_pblock(struct ext4_inode *inode, uint32_t lblock, uint32
     if (extent_len) *extent_len = 1;
 
     if (inode->i_flags & EXT4_EXTENTS_FL) {
-        return extent_get_pblock(&inode->i_block, lblock, extent_len);
+        return extent_get_pblock_new(inode, lblock, extent_len);
     } else {
         ASSERT(lblock <= BYTES2BLOCKS(inode_get_size(inode)));
 
@@ -153,6 +153,21 @@ int inode_get_by_number(uint32_t n, struct ext4_inode *inode)
      * inodes, on the other hand, are double size, but the struct still doesn't
      * have fields for all of them. */
     disk_read(off, MIN(super_inode_size(), sizeof(struct ext4_inode)), inode);
+    return 0;
+}
+
+int inode_set_by_number(uint32_t n, struct ext4_inode *inode)
+{
+    if (n == 0) return -ENOENT;
+    n--;    /* Inode 0 doesn't exist on disk */
+
+    off_t off = super_group_inode_table_offset(n);
+    off += (n % super_inodes_per_group()) * super_inode_size();
+
+    /* If on-disk inode is ext3 type, it will be smaller than the struct.  EXT4
+     * inodes, on the other hand, are double size, but the struct still doesn't
+     * have fields for all of them. */
+    disk_write(off, MIN(super_inode_size(), sizeof(struct ext4_inode)), inode);
     return 0;
 }
 

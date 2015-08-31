@@ -24,8 +24,84 @@
  * 
  */
 
+#ifndef EXT4_SUPER_H
+#define EXT4_SUPER_H
 
 #include "ext4_basic.h"
+
+#define EXT4_BG_INODE_UNINIT	0x0001 /* Inode table/bitmap not in use */
+#define EXT4_BG_BLOCK_UNINIT	0x0002 /* Block bitmap not in use */
+#define EXT4_BG_INODE_ZEROED	0x0004 /* On-disk itable initialized to zero */
+
+#define EXT4_MIN_BLOCK_SIZE		1024
+#define EXT4_MIN_DESC_SIZE		32
+#define EXT4_MIN_DESC_SIZE_64BIT	64
+#define	EXT4_MAX_DESC_SIZE		EXT4_MIN_BLOCK_SIZE
+
+
+#define EXT4_HAS_COMPAT_FEATURE(sb,mask)			\
+	( (sb)->s_feature_compat & cpu_to_le32(mask) )
+#define EXT4_HAS_RO_COMPAT_FEATURE(sb,mask)			\
+	( (sb)->s_feature_ro_compat & cpu_to_le32(mask) )
+#define EXT4_HAS_INCOMPAT_FEATURE(sb,mask)			\
+	( (sb)->s_feature_incompat & cpu_to_le32(mask) )
+#define EXT4_SET_COMPAT_FEATURE(sb,mask)			\
+	(sb)->s_feature_compat |= cpu_to_le32(mask)
+#define EXT4_SET_RO_COMPAT_FEATURE(sb,mask)			\
+	(sb)->s_feature_ro_compat |= cpu_to_le32(mask)
+#define EXT4_SET_INCOMPAT_FEATURE(sb,mask)			\
+	(sb)->s_feature_incompat |= cpu_to_le32(mask)
+#define EXT4_CLEAR_COMPAT_FEATURE(sb,mask)			\
+	(sb)->s_feature_compat &= ~cpu_to_le32(mask)
+#define EXT4_CLEAR_RO_COMPAT_FEATURE(sb,mask)			\
+	(sb)->s_feature_ro_compat &= ~cpu_to_le32(mask)
+#define EXT4_CLEAR_INCOMPAT_FEATURE(sb,mask)			\
+	(sb)->s_feature_incompat &= ~cpu_to_le32(mask)
+
+#define EXT4_FEATURE_COMPAT_DIR_PREALLOC	0x0001
+#define EXT4_FEATURE_COMPAT_IMAGIC_INODES	0x0002
+#define EXT4_FEATURE_COMPAT_HAS_JOURNAL		0x0004
+#define EXT4_FEATURE_COMPAT_EXT_ATTR		0x0008
+#define EXT4_FEATURE_COMPAT_RESIZE_INODE	0x0010
+#define EXT4_FEATURE_COMPAT_DIR_INDEX		0x0020
+
+#define EXT4_FEATURE_RO_COMPAT_SPARSE_SUPER	0x0001
+#define EXT4_FEATURE_RO_COMPAT_LARGE_FILE	0x0002
+#define EXT4_FEATURE_RO_COMPAT_BTREE_DIR	0x0004
+#define EXT4_FEATURE_RO_COMPAT_HUGE_FILE    0x0008
+#define EXT4_FEATURE_RO_COMPAT_GDT_CSUM		0x0010
+#define EXT4_FEATURE_RO_COMPAT_DIR_NLINK	0x0020
+#define EXT4_FEATURE_RO_COMPAT_EXTRA_ISIZE	0x0040
+
+#define EXT4_FEATURE_INCOMPAT_COMPRESSION	0x0001
+#define EXT4_FEATURE_INCOMPAT_FILETYPE		0x0002
+#define EXT4_FEATURE_INCOMPAT_RECOVER		0x0004 /* Needs recovery */
+#define EXT4_FEATURE_INCOMPAT_JOURNAL_DEV	0x0008 /* Journal device */
+#define EXT4_FEATURE_INCOMPAT_META_BG		0x0010
+#define EXT4_FEATURE_INCOMPAT_EXTENTS		0x0040 /* extents support */
+#define EXT4_FEATURE_INCOMPAT_64BIT         0x0080
+#define EXT4_FEATURE_INCOMPAT_MMP           0x0100
+#define EXT4_FEATURE_INCOMPAT_FLEX_BG		0x0200
+#define EXT4_FEATURE_INCOMPAT_DIRDATA		0x1000  /* used by Lustre - ldiskfs */
+#define EXT4_FEATURE_INCOMPAT_BG_USE_META_CSUM	0x2000 /* use crc32c for bg */
+#define EXT4_FEATURE_INCOMPAT_LARGEDIR		0x4000 /* >2GB or 3-lvl htree */
+#define EXT4_FEATURE_INCOMPAT_INLINEDATA	0x8000 /* data in inode */
+
+#define EXT4_FEATURE_INCOMPAT_SUPP	(                       \
+                    EXT4_FEATURE_INCOMPAT_FILETYPE|         \
+					EXT4_FEATURE_INCOMPAT_RECOVER|          \
+					EXT4_FEATURE_INCOMPAT_META_BG|          \
+					EXT4_FEATURE_INCOMPAT_EXTENTS|          \
+					EXT4_FEATURE_INCOMPAT_64BIT|            \
+					EXT4_FEATURE_INCOMPAT_FLEX_BG)
+#define EXT4_FEATURE_RO_COMPAT_SUPP	(                       \
+                    EXT4_FEATURE_RO_COMPAT_SPARSE_SUPER|    \
+					EXT4_FEATURE_RO_COMPAT_LARGE_FILE|      \
+					EXT4_FEATURE_RO_COMPAT_GDT_CSUM|        \
+					EXT4_FEATURE_RO_COMPAT_DIR_NLINK |      \
+					EXT4_FEATURE_RO_COMPAT_EXTRA_ISIZE |    \
+					EXT4_FEATURE_RO_COMPAT_BTREE_DIR |      \
+					EXT4_FEATURE_RO_COMPAT_HUGE_FILE)
 
 /*
  * Structure of a blocks group descriptor
@@ -144,3 +220,4 @@ struct ext4_super_block {
 	__u32   s_reserved[160];        /* Padding to the end of the block */
 };
 
+#endif

@@ -15,6 +15,7 @@
 
 #include "common.h"
 #include "disk.h"
+#include "super.h"
 #include "inode.h"
 #include "logging.h"
 #include "ops.h"

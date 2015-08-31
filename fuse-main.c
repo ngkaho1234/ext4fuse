@@ -22,7 +22,7 @@
 #include <stddef.h>
 
 #include "common.h"
-#include "disk.h"
+#include "buffer.h"
 #include "inode.h"
 #include "logging.h"
 #include "ops.h"
@@ -146,6 +146,9 @@ int main(int argc, char *argv[])
 
     fuse_opt_free_args(&args);
     free(e4f.disk);
+    super_group_uninit();
+    super_uninit();
+    fs_cache_cleanup();
 
     return res;
 }   

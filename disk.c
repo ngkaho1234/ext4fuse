@@ -84,14 +84,77 @@ static int pread_wrapper(int disk_fd, void *p, size_t size, off_t where)
 #endif
 }
 
+static int pwrite_wrapper(int disk_fd, void *p, size_t size, off_t where)
+{
+#if defined(__FreeBSD__) && !defined(__APPLE__)
+    /* FreeBSD needs to read aligned whole blocks.
+     * TODO: Check what is a safe block size.
+     */
+    static __thread uint8_t block[PREAD_BLOCK_SIZE];
+    off_t first_offset = where % PREAD_BLOCK_SIZE;
+    int ret = 0;
+
+    if (first_offset) {
+        /* This is the case if the read doesn't start on a block boundary.
+         * We still need to read the whole block and we do, but we only copy to
+         * the out pointer the bytes that where actually asked for.  In this
+         * case first_offset is the offset into the block. */
+        int pread_ret = pread(disk_fd, block, PREAD_BLOCK_SIZE, where - first_offset);
+        ASSERT(pread_ret == PREAD_BLOCK_SIZE);
+        size_t first_size = MIN(size, (size_t)(PREAD_BLOCK_SIZE - first_offset));
+        memcpy(block + first_offset, p, first_size);
+
+        pread_ret = pwrite(disk_fd, block, PREAD_BLOCK_SIZE, where - first_offset);
+        p += first_size;
+        size -= first_size;
+        where += first_size;
+        ret += first_size;
+
+        if (!size) return ret;
+    }
+
+    ASSERT(where % PREAD_BLOCK_SIZE == 0);
+
+    size_t mid_write_size = (size / PREAD_BLOCK_SIZE) * PREAD_BLOCK_SIZE;
+    if (mid_write_size) {
+        int pwrite_ret_mid = pwrite(disk_fd, p, mid_write_size, where);
+        ASSERT((size_t)pwrite_ret_mid == mid_write_size);
+
+        p += mid_write_size;
+        size -= mid_write_size;
+        where += mid_write_size;
+        ret += mid_write_size;
+
+        if (!size) return ret;
+    }
+
+    ASSERT(size < PREAD_BLOCK_SIZE);
+
+    int pread_ret_last = pread(disk_fd, block, PREAD_BLOCK_SIZE, where);
+    ASSERT(pread_ret_last == PREAD_BLOCK_SIZE);
+
+    memcpy(block, p, size);
+    pread_ret_last = pwrite(disk_fd, block, PREAD_BLOCK_SIZE, where);
+
+    return ret + size;
+#else
+    return pwrite(disk_fd, p, size, where);
+#endif
+}
+
 int disk_open(const char *path)
 {
-    disk_fd = open(path, O_RDONLY);
+    disk_fd = open(path, O_RDWR);
     if (disk_fd < 0) {
         return -errno;
     }
 
     return 0;
+}
+
+int disk_get_fd()
+{
+    return disk_fd;
 }
 
 int __disk_read(off_t where, size_t size, void *p, const char *func, int line)
@@ -110,6 +173,24 @@ int __disk_read(off_t where, size_t size, void *p, const char *func, int line)
     ASSERT((size_t)pread_ret == size);
 
     return pread_ret;
+}
+
+int __disk_write(off_t where, size_t size, void *p, const char *func, int line)
+{
+    static pthread_mutex_t write_lock = PTHREAD_MUTEX_INITIALIZER;
+    ssize_t pwrite_ret;
+
+    ASSERT(disk_fd >= 0);
+
+    pthread_mutex_lock(&write_lock);
+    DEBUG("Disk Write: 0x%jx +0x%zx [%s:%d]", where, size, func, line);
+    pwrite_ret = pwrite_wrapper(disk_fd, p, size, where);
+    pthread_mutex_unlock(&write_lock);
+    if (size == 0) WARNING("Write operation with 0 size");
+
+    ASSERT((size_t)pwrite_ret == size);
+
+    return pwrite_ret;
 }
 
 int disk_ctx_create(struct disk_ctx *ctx, off_t where, size_t size, uint32_t len)
@@ -140,6 +221,28 @@ int __disk_ctx_read(struct disk_ctx *ctx, size_t size, void *p, const char *func
     }
 
     ret = __disk_read(ctx->cur, size, p, func, line);
+    ctx->size -= ret;
+    ctx->cur += ret;
+
+    return ret;
+}
+
+int __disk_ctx_write(struct disk_ctx *ctx, size_t size, void *p, const char *func, int line)
+{
+    int ret = 0;
+
+    ASSERT(ctx->size);
+    if (ctx->size == 0) {
+        WARNING("Using a context with no bytes left");
+        return ret;
+    }
+
+    /* Truncate if there are too many bytes requested */
+    if (size > ctx->size) {
+        size = ctx->size;
+    }
+
+    ret = __disk_write(ctx->cur, size, p, func, line);
     ctx->size -= ret;
     ctx->cur += ret;
 
