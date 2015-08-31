@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "extents.h"
+#include "../alloc.h"
 #include "../logging.h"
 
 /*
@@ -32,39 +33,13 @@
 
 static inline int ext4_mark_inode_dirty(struct inode *inode)
 {
-
+	inode->i_data_dirty = 1;
 	return 0;
 }
 
-#define ext4_inode_to_goal_block(inode) (0)
-
-static inline int ext4_allocate_single_block(struct inode *inode,
-					     ext4_fsblk_t fake,
-					     ext4_fsblk_t *blockp,
-					     unsigned long count)
+static inline ext4_fsblk_t ext4_inode_to_goal_block(struct inode *inode)
 {
-	int err = -EIO;
-
-	return err;
-}
-
-static ext4_fsblk_t ext4_new_meta_blocks(struct inode *inode,
-			ext4_fsblk_t goal,
-			unsigned int flags,
-			unsigned long *count, int *errp)
-{
-	ext4_fsblk_t block = 0;
-	unsigned long nrblocks = (count)?(*count):1;
-
-	*errp = ext4_allocate_single_block(inode, goal, &block, nrblocks);
-	if (count)
-		*count = 1;
-	return block;
-}
-
-static void ext4_ext_free_blocks(struct inode *inode,
-				 ext4_fsblk_t block, int count, int flags)
-{
+	return (inode->i_ino - 1) / super_inodes_per_group();
 }
 
 #define ext_debug DEBUG

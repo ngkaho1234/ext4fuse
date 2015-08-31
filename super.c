@@ -13,6 +13,7 @@
 #include "logging.h"
 #include "bitmap.h"
 #include "super.h"
+#include "inode_in-memory.h"
 #include "buffer.h"
 
 static struct ext4_super_block super_block;
@@ -26,48 +27,53 @@ static struct group_desc_info {
 # define EXT4_DESC_PER_BLOCK		(super_block_size() / super_group_desc_size())
 
 
-static inline ext4_fsblk_t ext4_blocks_count(void)
+ext4_fsblk_t ext4_blocks_count(void)
 {
     return ((ext4_fsblk_t)le32_to_cpu(super_block.s_blocks_count_hi) << 32) |
            le32_to_cpu(super_block.s_blocks_count_lo);
 }
 
-static inline ext4_fsblk_t ext4_r_blocks_count()
+ext4_fsblk_t ext4_r_blocks_count(void)
 {
     return ((ext4_fsblk_t)le32_to_cpu(super_block.s_r_blocks_count_hi) << 32) |
            le32_to_cpu(super_block.s_r_blocks_count_lo);
 }
 
-static inline ext4_fsblk_t ext4_free_blocks_count()
+ext4_fsblk_t ext4_free_blocks_count(void)
 {
     return ((ext4_fsblk_t)le32_to_cpu(super_block.s_free_blocks_count_hi) << 32) |
            le32_to_cpu(super_block.s_free_blocks_count_lo);
 }
 
-static inline void ext4_blocks_count_set(ext4_fsblk_t blk)
+void ext4_blocks_count_set(ext4_fsblk_t blk)
 {
     super_block.s_blocks_count_lo = cpu_to_le32((__u32)blk);
     super_block.s_blocks_count_hi = cpu_to_le32(blk >> 32);
     super_block_dirty = 1;
 }
 
-static inline void ext4_free_blocks_count_set(ext4_fsblk_t blk)
+void ext4_free_blocks_count_set(ext4_fsblk_t blk)
 {
     super_block.s_free_blocks_count_lo = cpu_to_le32((__u32)blk);
     super_block.s_free_blocks_count_hi = cpu_to_le32(blk >> 32);
     super_block_dirty = 1;
 }
 
-static inline void ext4_r_blocks_count_set(ext4_fsblk_t blk)
+void ext4_r_blocks_count_set(ext4_fsblk_t blk)
 {
     super_block.s_r_blocks_count_lo = cpu_to_le32((__u32)blk);
     super_block.s_r_blocks_count_hi = cpu_to_le32(blk >> 32);
     super_block_dirty = 1;
 }
 
-static uint64_t super_blocks_per_group(void)
+uint64_t super_blocks_per_group(void)
 {
     return super_block.s_blocks_per_group;
+}
+
+ext4_fsblk_t super_first_data_block(void)
+{
+    return le32_to_cpu(super_block.s_first_data_block);
 }
 
 /* calculate the first block number of the group */
@@ -83,10 +89,10 @@ static uint64_t super_block_group_size(void)
     return BLOCKS2BYTES(super_block.s_blocks_per_group);
 }
 
-static uint32_t super_n_block_groups(void)
+ext4_group_t super_n_block_groups(void)
 {
-    uint32_t n = ext4_blocks_count() / super_block.s_blocks_per_group;
-    return n ? n : 1;
+    return (ext4_blocks_count() + super_blocks_per_group() - 1) /
+	    super_blocks_per_group();
 }
 
 static uint32_t super_group_desc_size(void)
@@ -394,6 +400,12 @@ static void mark_bitmap_end(int start_bit, int end_bit, void *bitmap)
         memset(bitmap + (i >> 3), 0xff, (end_bit - i) >> 3);
 }
 
+int ext4_is_block_bitmap_inited(ext4_group_t block_group)
+{
+    struct group_desc_info *gdesc_info = gdesc_table + block_group;
+    return gdesc_info->gdesc.bg_flags & cpu_to_le16(EXT4_BG_BLOCK_UNINIT);
+}
+
 /* Initializes an uninitialized block bitmap if given, and returns the
  * number of blocks free in the group. */
 ext4_fsblk_t ext4_init_block_bitmap(struct buffer_head *bh,
@@ -489,8 +501,50 @@ int ext4_try_to_init_block_bitmap(ext4_group_t block_group)
         if (!bh)
             return ret;
         ext4_init_block_bitmap(bh, block_group);
+        fs_brelse(bh);
     }
     return 0;
+}
+
+ext4_fsblk_t ext4_inode_blocks(struct ext4_inode *inode)
+{
+    ext4_fsblk_t i_blocks;
+
+    if (EXT4_HAS_RO_COMPAT_FEATURE(&super_block,
+                                   EXT4_FEATURE_RO_COMPAT_HUGE_FILE)) {
+        /* we are using combined 48 bit field */
+        i_blocks = ((uint64_t)le16_to_cpu(inode->osd2.linux2.l_i_blocks_high)) << 32 |
+                   le32_to_cpu(inode->i_blocks_lo);
+        if (inode->i_flags & EXT4_HUGE_FILE_FL) {
+            /* i_blocks represent file system block size */
+            return i_blocks;
+        } else
+            return i_blocks >> (super_block_size_bits() - 9);
+
+    } else
+        return le32_to_cpu(inode->i_blocks_lo) >> (super_block_size_bits() - 9);
+
+}
+
+void ext4_set_inode_blocks(struct inode *inode, ext4_fsblk_t blocks)
+{
+    if (EXT4_HAS_RO_COMPAT_FEATURE(&super_block,
+                                   EXT4_FEATURE_RO_COMPAT_HUGE_FILE)) {
+        /* we are using combined 48 bit field */
+        if (cpu_to_le32(inode->raw_inode->i_flags) & EXT4_HUGE_FILE_FL) {
+            /* i_blocks represent file system block size */
+            inode->raw_inode->i_blocks_lo = cpu_to_le32((uint32_t)blocks);
+            inode->raw_inode->osd2.linux2.l_i_blocks_high = cpu_to_le16(blocks >> 32);
+        } else {
+            blocks <<= (super_block_size_bits() - 9);
+            inode->raw_inode->i_blocks_lo = cpu_to_le32((uint32_t)blocks);
+            inode->raw_inode->osd2.linux2.l_i_blocks_high = cpu_to_le16(blocks >> 32);
+        }
+    } else {
+        blocks <<= (super_block_size_bits() - 9);
+        inode->raw_inode->i_blocks_lo = cpu_to_le32((uint32_t)blocks);
+    }
+    inode->i_data_dirty = 1;
 }
 
 int super_fill(void)

@@ -22,11 +22,21 @@
 /* struct ext4_super */
 uint32_t super_block_size(void);
 int super_block_size_bits(void);
+uint64_t super_blocks_per_group(void);
 uint32_t super_inodes_per_group(void);
 uint32_t super_inode_size(void);
+ext4_fsblk_t super_first_data_block(void);
+ext4_group_t super_n_block_groups(void);
 int super_fill(void);
 int super_writeback(void);
 void super_uninit(void);
+
+ext4_fsblk_t ext4_blocks_count(void);
+ext4_fsblk_t ext4_r_blocks_count(void);
+ext4_fsblk_t ext4_free_blocks_count(void);
+void ext4_blocks_count_set(ext4_fsblk_t blk);
+void ext4_free_blocks_count_set(ext4_fsblk_t blk);
+void ext4_r_blocks_count_set(ext4_fsblk_t blk);
 
 /* struct ext4_group_desc */
 off_t super_group_inode_table_offset(uint32_t inode_num);
@@ -50,5 +60,11 @@ void ext4_used_dirs_set(ext4_group_t block_group, __u32 count);
 void ext4_itable_unused_set(ext4_group_t block_group, __u32 count);
 
 int ext4_try_to_init_block_bitmap(ext4_group_t block_group);
+
+#include "inode_in-memory.h"
+
+ext4_fsblk_t ext4_inode_blocks(struct ext4_inode *inode);
+void ext4_set_inode_blocks(struct inode *inode, ext4_fsblk_t blocks);
+int ext4_is_block_bitmap_inited(ext4_group_t block_group);
 
 #endif
