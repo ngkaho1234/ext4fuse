@@ -93,7 +93,7 @@ int op_read(const char *path, char *buf, size_t size, off_t offset,
     un_offset += ret;
 
     for (unsigned int lblock = un_offset / BLOCK_SIZE; size > ret; lblock += extent_len) {
-        uint64_t pblock = inode_get_data_pblock(&inode, lblock, &extent_len);
+        uint64_t pblock = inode_get_data_pblock(&inode, lblock, &extent_len, 0);
         size_t bytes;
 
         if (pblock) {

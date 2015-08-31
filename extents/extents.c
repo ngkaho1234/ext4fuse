@@ -1637,15 +1637,26 @@ out2:
 	return err ? err : allocated;
 }
 
-uint64_t extent_get_pblock_new(struct ext4_inode *raw_inode, uint32_t lblock, uint32_t *len)
+uint64_t extent_get_pblock_new(struct ext4_inode *raw_inode, uint32_t lblock, uint32_t *len, int create)
 {
 	struct inode *inode = inode_get(0, raw_inode);
 	uint64_t ret_block = 0;
 	int ret_len = 0;
 	struct buffer_head bh_result = { 0 };
 
-	ret_len = ext4_ext_get_blocks(NULL, inode, lblock, EXT_INIT_MAX_LEN,
+	if (create) {
+		int wanted_len;
+		if (len)
+			wanted_len = *len;
+		else
+			wanted_len = 1;
+
+		ret_len = ext4_ext_get_blocks(NULL, inode, lblock, wanted_len,
+				      &bh_result, 1, 0);
+	} else
+		ret_len = ext4_ext_get_blocks(NULL, inode, lblock, EXT_INIT_MAX_LEN,
 				      &bh_result, 0, 0);
+
 	if (ret_len <= 0)
 		ret_len = 0;
 out:

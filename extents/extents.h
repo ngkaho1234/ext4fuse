@@ -291,7 +291,7 @@ static inline void ext4_idx_store_pblock(struct ext4_extent_idx *ix,
 int ext4_ext_get_blocks(void *handle, struct inode *inode, ext4_fsblk_t iblock,
 			unsigned long max_blocks, struct buffer_head *bh_result,
 			int create, int extend_disksize);
-uint64_t extent_get_pblock_new(struct ext4_inode *raw_inode, uint32_t lblock, uint32_t *len);
+uint64_t extent_get_pblock_new(struct ext4_inode *raw_inode, uint32_t lblock, uint32_t *len, int create);
 
 void ext4_ext_init(struct super_block *sb);
 

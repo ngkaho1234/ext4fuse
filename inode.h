@@ -16,7 +16,7 @@ static inline uint64_t inode_get_size(struct ext4_inode *inode)
     return ((uint64_t)inode->i_size_high << 32) | inode->i_size_lo;
 }
 
-uint64_t inode_get_data_pblock(struct ext4_inode *inode, uint32_t lblock, uint32_t *extent_len);
+uint64_t inode_get_data_pblock(struct ext4_inode *inode, uint32_t lblock, uint32_t *extent_len, int create);
 
 struct inode_dir_ctx *inode_dir_ctx_get(void);
 void inode_dir_ctx_put(struct inode_dir_ctx *);

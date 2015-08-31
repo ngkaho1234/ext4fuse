@@ -67,14 +67,15 @@ static uint32_t __inode_get_data_pblock_tind(uint32_t lblock, uint32_t tindex_bl
 /* Get pblock for a given inode and lblock.  If extent is not NULL, it will
  * store the length of extent, that is, the number of consecutive pblocks
  * that are also consecutive lblocks (not counting the requested one). */
-uint64_t inode_get_data_pblock(struct ext4_inode *inode, uint32_t lblock, uint32_t *extent_len)
+uint64_t inode_get_data_pblock(struct ext4_inode *inode, uint32_t lblock, uint32_t *extent_len, int create)
 {
-    if (extent_len) *extent_len = 1;
+    if (extent_len && !create) *extent_len = 1;
 
     if (inode->i_flags & EXT4_EXTENTS_FL) {
-        return extent_get_pblock_new(inode, lblock, extent_len);
+        return extent_get_pblock_new(inode, lblock, extent_len, create);
     } else {
         ASSERT(lblock <= BYTES2BLOCKS(inode_get_size(inode)));
+        ASSERT(!create);
 
         if (lblock < EXT4_NDIR_BLOCKS) {
             return inode->i_block[lblock];
@@ -100,7 +101,7 @@ uint64_t inode_get_data_pblock(struct ext4_inode *inode, uint32_t lblock, uint32
 
 static void dir_ctx_update(struct ext4_inode *inode, uint32_t lblock, struct inode_dir_ctx *ctx)
 {
-    uint64_t dir_pblock = inode_get_data_pblock(inode, lblock, NULL);
+    uint64_t dir_pblock = inode_get_data_pblock(inode, lblock, NULL, 0);
     disk_read_block(dir_pblock, ctx->buf);
     ctx->lblock = lblock;
 }
