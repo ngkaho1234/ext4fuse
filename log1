@@ -1,0 +1,219 @@
+[debug][__disk_read:168] Disk Read: 0x438 +0x2 [main:136]
+[info] [op_init:20] Using FUSE protocol 7.16
+[debug][__disk_read:168] Disk Read: 0x400 +0x400 [super_fill:552]
+[info] [super_fill:554] BLOCK SIZE: 4096
+[info] [super_fill:555] BLOCK GROUP SIZE: 134217728
+[info] [super_fill:556] N BLOCK GROUPS: 120
+[info] [super_fill:557] INODE SIZE: 256
+[info] [super_fill:558] INODES PER GROUP: 8144
+[debug][__disk_read:168] Disk Read: 0x1000 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x2020 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x3040 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x4060 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x5080 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x60a0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x70c0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x80e0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x9100 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0xa120 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0xb140 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0xc160 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0xd180 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0xe1a0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0xf1c0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x101e0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x11200 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x12220 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x13240 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x14260 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x15280 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x162a0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x172c0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x182e0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x19300 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x1a320 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x1b340 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x1c360 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x1d380 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x1e3a0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x1f3c0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x203e0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x21400 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x22420 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x23440 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x24460 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x25480 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x264a0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x274c0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x284e0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x29500 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x2a520 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x2b540 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x2c560 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x2d580 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x2e5a0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x2f5c0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x305e0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x31600 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x32620 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x33640 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x34660 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x35680 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x366a0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x376c0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x386e0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x39700 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x3a720 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x3b740 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x3c760 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x3d780 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x3e7a0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x3f7c0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x407e0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x41800 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x42820 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x43840 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x44860 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x45880 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x468a0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x478c0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x488e0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x49900 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x4a920 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x4b940 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x4c960 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x4d980 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x4e9a0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x4f9c0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x509e0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x51a00 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x52a20 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x53a40 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x54a60 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x55a80 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x56aa0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x57ac0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x58ae0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x59b00 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x5ab20 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x5bb40 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x5cb60 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x5db80 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x5eba0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x5fbc0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x60be0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x61c00 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x62c20 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x63c40 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x64c60 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x65c80 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x66ca0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x67cc0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x68ce0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x69d00 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x6ad20 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x6bd40 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x6cd60 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x6dd80 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x6eda0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x6fdc0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x70de0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x71e00 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x72e20 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x73e40 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x74e60 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x75e80 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x76ea0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x77ec0 +0x20 [super_group_fill:619]
+[debug][__disk_read:168] Disk Read: 0x78ee0 +0x20 [super_group_fill:619]
+[info] [dcache_init_root:47] Initializing root dcache entry
+[debug][op_getattr:23] getattr(/abc)
+[debug][inode_get_idx_by_path:218] Looking up: /abc
+[debug][dcache_lookup:104] Looking up abc,3: Not found (no childs)
+[debug][inode_get_idx_by_path:223] Looking up after dcache: abc
+[debug][super_group_inode_table_offset:581] Inode table offset: 0x0x3dc
+[debug][__disk_read:168] Disk Read: 0x3dc100 +0x9c [inode_get_by_number:156]
+[debug][extent_get_pblock_new:1661] lblock: 0, ret_len: 1, block: 9132
+[debug][__disk_read:168] Disk Read: 0x23ac000 +0x1000 [dir_ctx_update:105]
+[debug][inode_dentry_get:131] 0/4096
+[debug][inode_dentry_get:131] 12/4096
+[debug][inode_dentry_get:131] 24/4096
+[debug][inode_dentry_get:131] 44/4096
+[debug][inode_get_idx_by_path:244] Lookup following inode 12
+[debug][dcache_insert:66] Inserting abc,3 to dcache
+[debug][super_group_inode_table_offset:581] Inode table offset: 0x0x3dc
+[debug][__disk_read:168] Disk Read: 0x3dcb00 +0x9c [inode_get_by_number:156]
+[debug][op_getattr:32] getattr done
+[debug][op_open:20] open
+[debug][inode_get_idx_by_path:218] Looking up: /abc
+[debug][dcache_lookup:113] Looking up abc,3: Found
+[debug][inode_get_idx_by_path:223] Looking up after dcache: 
+[debug][op_open:23] /abc is inode 1085700400
+[debug][op_write:62] write(/abc, buf, 4096, 0, fi->fh=12)
+[debug][super_group_inode_table_offset:581] Inode table offset: 0x0x3dc
+[debug][__disk_read:168] Disk Read: 0x3dcb00 +0x9c [inode_get_by_number:156]
+[debug][extent_get_pblock_new:1661] lblock: 0, ret_len: 1, block: 34304
+[debug][disk_ctx_create:203] New disk context: 0x8600000 +0x414fed7800001000
+[debug][__disk_write:186] Disk Write: 0x8600000 +0x1000 [op_write:85]
+[debug][op_write:92] Write 4096/4096 bytes from 1 consecutive blocks 0
+[debug][super_group_inode_table_offset:581] Inode table offset: 0x0x3dc
+[debug][__disk_write:186] Disk Write: 0x3dcb00 +0x9c [inode_set_by_number:171]
+[debug][op_write:62] write(/abc, buf, 4096, 4096, fi->fh=12)
+[debug][super_group_inode_table_offset:581] Inode table offset: 0x0x3dc
+[debug][__disk_read:168] Disk Read: 0x3dcb00 +0x9c [inode_get_by_number:156]
+[debug][ext4_new_meta_blocks:101] err: 0, len: 1, ret_block: 9138
+[debug][ext4_new_meta_blocks:103] bitmap_blk: 956, first_data_block: 0, block_group: 0, index: 9138
+[debug][print_path:984] ====================
+
+[debug][print_path:989] depth 0, p_block: 9138, p_ext offset: 1, p_idx offset: 0
+
+[debug][extent_get_pblock_new:1661] lblock: 1, ret_len: 1, block: 9138
+[debug][super_group_inode_table_offset:581] Inode table offset: 0x0x3dc
+[debug][__disk_write:186] Disk Write: 0x3dcb00 +0x9c [inode_set_by_number:171]
+[debug][disk_ctx_create:203] New disk context: 0x23b2000 +0x40b66d7800001000
+[debug][__disk_write:186] Disk Write: 0x23b2000 +0x1000 [op_write:85]
+[debug][op_write:92] Write 4096/4096 bytes from 1 consecutive blocks 1
+[debug][super_group_inode_table_offset:581] Inode table offset: 0x0x3dc
+[debug][__disk_write:186] Disk Write: 0x3dcb00 +0x9c [inode_set_by_number:171]
+[debug][op_write:62] write(/abc, buf, 4096, 8192, fi->fh=12)
+[debug][super_group_inode_table_offset:581] Inode table offset: 0x0x3dc
+[debug][__disk_read:168] Disk Read: 0x3dcb00 +0x9c [inode_get_by_number:156]
+[debug][ext4_new_meta_blocks:101] err: 0, len: 1, ret_block: 9139
+[debug][ext4_new_meta_blocks:103] bitmap_blk: 956, first_data_block: 0, block_group: 0, index: 9139
+[debug][print_path:984] ====================
+
+[debug][print_path:989] depth 0, p_block: 9138, p_ext offset: 1, p_idx offset: 0
+
+[debug][extent_get_pblock_new:1661] lblock: 2, ret_len: 1, block: 9139
+[debug][super_group_inode_table_offset:581] Inode table offset: 0x0x3dc
+[debug][__disk_write:186] Disk Write: 0x3dcb00 +0x9c [inode_set_by_number:171]
+[debug][disk_ctx_create:203] New disk context: 0x23b3000 +0x414fed7800001000
+[debug][__disk_write:186] Disk Write: 0x23b3000 +0x1000 [op_write:85]
+[debug][op_write:92] Write 4096/4096 bytes from 1 consecutive blocks 2
+[debug][super_group_inode_table_offset:581] Inode table offset: 0x0x3dc
+[debug][__disk_write:186] Disk Write: 0x3dcb00 +0x9c [inode_set_by_number:171]
+[debug][op_write:62] write(/abc, buf, 4096, 12288, fi->fh=12)
+[debug][super_group_inode_table_offset:581] Inode table offset: 0x0x3dc
+[debug][__disk_read:168] Disk Read: 0x3dcb00 +0x9c [inode_get_by_number:156]
+[debug][ext4_new_meta_blocks:101] err: 0, len: 1, ret_block: 9140
+[debug][ext4_new_meta_blocks:103] bitmap_blk: 956, first_data_block: 0, block_group: 0, index: 9140
+[debug][print_path:984] ====================
+
+[debug][print_path:989] depth 0, p_block: 9138, p_ext offset: 1, p_idx offset: 0
+
+[debug][extent_get_pblock_new:1661] lblock: 3, ret_len: 1, block: 9140
+[debug][super_group_inode_table_offset:581] Inode table offset: 0x0x3dc
+[debug][__disk_write:186] Disk Write: 0x3dcb00 +0x9c [inode_set_by_number:171]
+[debug][disk_ctx_create:203] New disk context: 0x23b4000 +0x40b66d7800001000
+[debug][__disk_write:186] Disk Write: 0x23b4000 +0x1000 [op_write:85]
+[debug][op_write:92] Write 4096/4096 bytes from 1 consecutive blocks 3
+[debug][super_group_inode_table_offset:581] Inode table offset: 0x0x3dc
+[debug][__disk_write:186] Disk Write: 0x3dcb00 +0x9c [inode_set_by_number:171]
+[debug][op_getattr:23] getattr(/)
+[debug][inode_get_idx_by_path:218] Looking up: /
+[debug][inode_get_idx_by_path:223] Looking up after dcache: 
+[debug][super_group_inode_table_offset:581] Inode table offset: 0x0x3dc
+[debug][__disk_read:168] Disk Read: 0x3dc100 +0x9c [inode_get_by_number:156]
+[debug][op_getattr:32] getattr done
+[debug][main:150] Uninitializing...
+[debug][__disk_write:186] Disk Write: 0x1000 +0x20 [super_group_writeback:639]

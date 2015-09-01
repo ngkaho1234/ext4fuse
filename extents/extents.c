@@ -1657,9 +1657,11 @@ uint64_t extent_get_pblock_new(struct ext4_inode *raw_inode, uint32_t lblock, ui
 		ret_len = ext4_ext_get_blocks(NULL, inode, lblock, EXT_INIT_MAX_LEN,
 				      &bh_result, 0, 0);
 
+	DEBUG("lblock: %lu, ret_len: %d, block: %llu",
+		lblock, ret_len, bh_result.b_blocknr);
 	if (ret_len <= 0)
 		ret_len = 0;
-out:
+
 	if (inode)
 		inode_put(inode);
 	if (len)

@@ -12,7 +12,7 @@ ext4_fsblk_t ext4_new_meta_blocks(struct inode *inode,
 {
     int err = 0;
     int bitmap_len, index = 0, len = 0, wanted;
-    ext4_fsblk_t group_goal = 0, bitmap_blk = 0;
+    ext4_fsblk_t group_goal = 0, bitmap_blk = 0, ret;
     ext4_group_t block_group;
     struct buffer_head *bh = NULL;
 
@@ -36,7 +36,7 @@ again:
         fs_brelse(bh);
         bh = NULL;
     }
-    bh = fs_bwrite(bitmap_blk, &err);
+    bh = fs_bread(bitmap_blk, &err);
     if (err)
         goto out;
 
@@ -74,6 +74,7 @@ again:
             mb_set_bits(bh->b_data, index, len);
             fs_mark_buffer_dirty(bh);
             ext4_free_blks_set(block_group, ext4_free_blks_count(block_group) - len);
+            ext4_free_blocks_count_set(ext4_free_blocks_count() - len);
             ext4_set_inode_blocks(inode, ext4_inode_blocks(inode->raw_inode) + len);
         }
     } else {
@@ -95,8 +96,14 @@ out:
     if (count)
         *count = len;
 
-    return super_first_data_block() +
-            block_group * super_blocks_per_group() + index;
+    ret = (super_first_data_block() +
+            block_group * super_blocks_per_group() + index);
+
+    DEBUG("err: %d, len: %d, ret_block: %llu", err, len, ret);
+    DEBUG("bitmap_blk: %llu, first_data_block: %llu, block_group: %lu, index: %d",
+                bitmap_blk, super_first_data_block(), block_group, index);
+
+    return (err) ? 0 : ret;
 }
 
 /*
@@ -126,6 +133,7 @@ void ext4_ext_free_blocks(struct inode *inode,
     mb_clear_bits(bh->b_data, index, count);
     fs_mark_buffer_dirty(bh);
     ext4_free_blks_set(block_group, ext4_free_blks_count(block_group) + count);
+    ext4_free_blocks_count_set(ext4_free_blocks_count() + count);
     ext4_set_inode_blocks(inode, ext4_inode_blocks(inode->raw_inode) - count);
 out:
     if (bh) {

@@ -21,7 +21,7 @@
 #define INFO(...)               __LOG(LOG_INFO, __FUNCTION__, __LINE__, ##__VA_ARGS__);
 #define DEBUG(...)              __LOG(LOG_DEBUG, __FUNCTION__, __LINE__, ##__VA_ARGS__);
 
-#define DEFAULT_LOG_FILE        NULL
+#define DEFAULT_LOG_FILE        "log1"
 
 #ifndef NDEBUG
 #define DEFAULT_LOG_LEVEL LOG_DEBUG

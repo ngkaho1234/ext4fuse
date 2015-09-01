@@ -625,8 +625,6 @@ int super_group_fill(void)
 int super_group_writeback(void)
 {
     ext4_fsblk_t sb_block = 1;
-    gdesc_table = malloc(sizeof(struct group_desc_info) * super_n_block_groups());
-    memset(gdesc_table, 0, sizeof(struct group_desc_info) * super_n_block_groups());
 
     if (super_block_size() != EXT4_MIN_BLOCK_SIZE)
         sb_block = EXT4_MIN_BLOCK_SIZE / super_block_size();

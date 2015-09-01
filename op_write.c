@@ -54,6 +54,7 @@ int op_write(const char *path, const char *buf, size_t size, off_t offset,
     struct ext4_inode raw_inode;
     size_t ret = 0;
     uint32_t extent_len, ino;
+    uint64_t orig_size;
 
     /* Not sure if this is possible at all... */
     ASSERT(offset >= 0);
@@ -64,6 +65,7 @@ int op_write(const char *path, const char *buf, size_t size, off_t offset,
     if (inode_get_ret < 0) {
         return inode_get_ret;
     }
+    orig_size = inode_get_size(&raw_inode);
 
     ret = first_write(ino, &raw_inode, buf, size, offset);
 
@@ -87,12 +89,13 @@ int op_write(const char *path, const char *buf, size_t size, off_t offset,
         }
         ret += bytes;
         buf += bytes;
-        DEBUG("Write %zd/%zd bytes from %d consecutive blocks", ret, size, extent_len);
+        DEBUG("Write %zd/%zd bytes from %d consecutive blocks %lu", ret, size, extent_len, lblock);
     }
 
-    struct inode *inode = inode_get(ino, &raw_inode);
-    if (inode) {
-        inode_set_size(inode, inode_get_size(&raw_inode) + ret);
+    if (orig_size < offset + ret) {
+        struct inode *inode = inode_get(ino, &raw_inode);
+        ASSERT(inode);
+        inode_set_size(inode, offset + ret);
         inode_put(inode);
     }
 

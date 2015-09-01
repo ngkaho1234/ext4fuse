@@ -147,6 +147,7 @@ int main(int argc, char *argv[])
 
     fuse_opt_free_args(&args);
     free(e4f.disk);
+    DEBUG("Uninitializing...");
     super_group_uninit();
     super_uninit();
     fs_cache_cleanup();
