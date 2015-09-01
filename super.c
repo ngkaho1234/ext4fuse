@@ -403,7 +403,7 @@ static void mark_bitmap_end(int start_bit, int end_bit, void *bitmap)
 int ext4_is_block_bitmap_inited(ext4_group_t block_group)
 {
     struct group_desc_info *gdesc_info = gdesc_table + block_group;
-    return gdesc_info->gdesc.bg_flags & cpu_to_le16(EXT4_BG_BLOCK_UNINIT);
+    return !(gdesc_info->gdesc.bg_flags & cpu_to_le16(EXT4_BG_BLOCK_UNINIT));
 }
 
 /* Initializes an uninitialized block bitmap if given, and returns the
@@ -611,7 +611,8 @@ int super_group_fill(void)
         sb_block = EXT4_MIN_BLOCK_SIZE / super_block_size();
 
     for (ext4_group_t i = 0; i < super_n_block_groups(); i++) {
-        off_t bg_off = descriptor_loc(sb_block, i) << super_block_size_bits();
+        off_t bg_off = descriptor_loc(sb_block, i / EXT4_DESC_PER_BLOCK)
+                         << super_block_size_bits();
         bg_off += super_group_desc_size() * (i & (EXT4_DESC_PER_BLOCK - 1));
 
         /* disk advances super_group_desc_size(), pointer sizeof(struct...).
@@ -630,7 +631,8 @@ int super_group_writeback(void)
         sb_block = EXT4_MIN_BLOCK_SIZE / super_block_size();
 
     for (ext4_group_t i = 0; i < super_n_block_groups(); i++) {
-        off_t bg_off = descriptor_loc(sb_block, i) << super_block_size_bits();
+        off_t bg_off = descriptor_loc(sb_block, i / EXT4_DESC_PER_BLOCK)
+                         << super_block_size_bits();
         bg_off += super_group_desc_size() * (i & (EXT4_DESC_PER_BLOCK - 1));
 
         /* disk advances super_group_desc_size(), pointer sizeof(struct...).

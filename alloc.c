@@ -124,7 +124,8 @@ void ext4_ext_free_blocks(struct inode *inode,
         goto out;
 
     /*group_desc->bg_checksum = ext4_group_desc_csum(EXT3_SB(sb), Group, group_desc);*/
-    bh = fs_bwrite(bitmap_blk, &err);
+    bitmap_blk = ext4_block_bitmap(block_group);
+    bh = fs_bread(bitmap_blk, &err);
     if (err)
         goto out;
 
@@ -136,6 +137,8 @@ void ext4_ext_free_blocks(struct inode *inode,
     ext4_free_blocks_count_set(ext4_free_blocks_count() + count);
     ext4_set_inode_blocks(inode, ext4_inode_blocks(inode->raw_inode) - count);
 out:
+    DEBUG("bitmap_blk: %llu, first_data_block: %llu, block_group: %lu, index: %d, blockno: %llu, count: %d",
+                bitmap_blk, super_first_data_block(), block_group, index, block, count);
     if (bh) {
         fs_brelse(bh);
         bh = NULL;

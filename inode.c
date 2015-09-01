@@ -175,6 +175,7 @@ int inode_set_by_number(uint32_t n, struct ext4_inode *inode)
     /* If on-disk inode is ext3 type, it will be smaller than the struct.  EXT4
      * inodes, on the other hand, are double size, but the struct still doesn't
      * have fields for all of them. */
+    DEBUG("Writing inode...off: %llu", off)
     disk_write(off, MIN(super_inode_size(), sizeof(struct ext4_inode)), inode);
     return 0;
 }
