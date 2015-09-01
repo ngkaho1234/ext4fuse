@@ -1,7 +1,7 @@
 #include "bitmap.h"
 #include "super.h"
+#include "alloc.h"
 #include "buffer.h"
-#include "inode_in-memory.h"
 #include "logging.h"
 
 

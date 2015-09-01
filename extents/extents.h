@@ -4,7 +4,7 @@
 #include "../types/ext4_basic.h"
 #include "../super.h"
 #include "../buffer.h"
-#include "../inode_in-memory.h"
+#include "../inode.h"
 
 /*
  * Copyright (c) 2003-2006, Cluster File Systems, Inc, info@clusterfs.com

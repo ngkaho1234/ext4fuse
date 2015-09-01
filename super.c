@@ -13,7 +13,7 @@
 #include "logging.h"
 #include "bitmap.h"
 #include "super.h"
-#include "inode_in-memory.h"
+#include "inode.h"
 #include "buffer.h"
 
 static struct ext4_super_block super_block;

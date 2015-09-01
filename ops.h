@@ -9,6 +9,8 @@ int op_read(const char *path, char *buf, size_t size, off_t offset
                              , struct fuse_file_info *fi);
 int op_write(const char *path, const char *buf, size_t size, off_t offset
                              , struct fuse_file_info *fi);
+int op_truncate (const char *path, off_t length);
+int op_ftruncate (const char *path, off_t length, struct fuse_file_info *fi);
 int op_readdir(const char *path, void *buf, fuse_fill_dir_t filler
                                , off_t offset, struct fuse_file_info *fi);
 int op_getattr(const char *path, struct stat *stbuf);

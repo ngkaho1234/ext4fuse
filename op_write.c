@@ -16,7 +16,7 @@
 #include "common.h"
 #include "disk.h"
 #include "super.h"
-#include "inode_in-memory.h"
+#include "inode.h"
 #include "logging.h"
 #include "ops.h"
 
@@ -92,7 +92,7 @@ int op_write(const char *path, const char *buf, size_t size, off_t offset,
         DEBUG("Write %zd/%zd bytes from %d consecutive blocks %lu", ret, size, extent_len, lblock);
     }
 
-    if (orig_size < offset + ret) {
+    if ((off_t)orig_size < offset + ret) {
         struct inode *inode = inode_get(ino, &raw_inode);
         ASSERT(inode);
         inode_set_size(inode, offset + ret);

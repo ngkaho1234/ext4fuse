@@ -61,7 +61,7 @@ void ext4_itable_unused_set(ext4_group_t block_group, __u32 count);
 
 int ext4_try_to_init_block_bitmap(ext4_group_t block_group);
 
-#include "inode_in-memory.h"
+#include "inode.h"
 
 ext4_fsblk_t ext4_inode_blocks(struct ext4_inode *inode);
 void ext4_set_inode_blocks(struct inode *inode, ext4_fsblk_t blocks);

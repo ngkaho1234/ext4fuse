@@ -41,6 +41,8 @@ static struct fuse_operations e4f_ops = {
     .open       = op_open,
     .read       = op_read,
     .write      = op_write,
+    .truncate   = op_truncate,
+    .ftruncate   = op_ftruncate,
     .readlink   = op_readlink,
     .init       = op_init,
 };

@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "inode_in-memory.h"
+#include "inode.h"
 
 struct inode *inode_get(uint32_t ino, struct ext4_inode *raw_inode)
 {
@@ -11,6 +11,7 @@ struct inode *inode_get(uint32_t ino, struct ext4_inode *raw_inode)
 	inode->i_data_dirty = 0;
 	inode->raw_inode = raw_inode;
 	inode->i_data = raw_inode->i_block;
+	return inode;
 }
 
 void inode_put(struct inode *inode)

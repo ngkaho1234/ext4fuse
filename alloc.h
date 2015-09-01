@@ -2,7 +2,7 @@
 #define ALLOC_H
 
 #include "types/ext4_basic.h"
-#include "inode_in-memory.h"
+#include "inode.h"
 
 ext4_fsblk_t ext4_new_meta_blocks(struct inode *inode,
             ext4_fsblk_t goal,

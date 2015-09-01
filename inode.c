@@ -99,6 +99,13 @@ uint64_t inode_get_data_pblock(struct ext4_inode *inode, uint32_t lblock, uint32
     return 0;
 }
 
+/* Truncate file blocks from @from. */
+int inode_remove_data_pblock(struct inode *inode, ext4_lblk_t from)
+{
+    ASSERT(inode->raw_inode->i_flags & EXT4_EXTENTS_FL);
+    return ext4_ext_remove_space(inode, from, -1UL);
+}
+
 static void dir_ctx_update(struct ext4_inode *inode, uint32_t lblock, struct inode_dir_ctx *ctx)
 {
     uint64_t dir_pblock = inode_get_data_pblock(inode, lblock, NULL, 0);

@@ -38,7 +38,8 @@ static int device_read(int fd, uint64_t block, int count, int blk_size,
 {
 	int ret;
 	static int rdcount;
-	uint64_t off, seek_ret;
+	uint64_t off;
+	off64_t seek_ret;
 
 	off = block * blk_size;
 	/*
@@ -66,7 +67,8 @@ static int device_write(int fd, uint64_t block, int count, int blk_size,
 			void *buf)
 {
 	int ret;
-	uint64_t off, seek_ret;
+	uint64_t off;
+	off64_t seek_ret;
 
 	off = block * blk_size;
 	/*
@@ -154,7 +156,7 @@ static int sync_dirty_buffer(struct buffer_head *bh);
 
 void bdev_free(struct block_device *bdev)
 {
-	struct rb_node *node;
+	struct rb_node *node = NULL;
 	
 	while (!list_empty(&bdev->bd_bh_dirty)) {
 		struct buffer_head *cur;
@@ -250,7 +252,7 @@ void buffer_free(struct buffer_head *bh)
 	bdev = bh->b_bdev;
 
 	detach_bh_from_freelist(bh);
-	rb_erase(&bh->b_rb_node, &bh->b_bdev->bd_bh_root);
+	rb_erase(&bh->b_rb_node, &bdev->bd_bh_root);
 
 	pthread_mutex_destroy(&bh->b_lock);
 
@@ -396,9 +398,9 @@ void brelse(struct buffer_head *bh)
 	if (bh == NULL)
 		return;
 	refcount = bh->b_count;
-	if (bh->b_count > 1)
+	if (refcount > 1)
 		goto out;
-	assert(bh->b_count == 1);
+	assert(refcount == 1);
 
 	if (!buffer_dirty(bh))
 		reclaim_buffer(bh);

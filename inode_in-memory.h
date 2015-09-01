@@ -1,8 +1,6 @@
 #ifndef INODE_IN_MEMORY_H
 #define INODE_IN_MEMORY_H
 
-#include "inode.h"
-
 struct inode {
 	int i_data_dirty;
 	uint32_t i_ino;
