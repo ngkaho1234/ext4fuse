@@ -544,7 +544,7 @@ void ext4_set_inode_blocks(struct inode *inode, ext4_fsblk_t blocks)
         blocks <<= (super_block_size_bits() - 9);
         inode->raw_inode->i_blocks_lo = cpu_to_le32((uint32_t)blocks);
     }
-    inode->i_data_dirty = 1;
+    inode_mark_dirty(inode);
 }
 
 int super_fill(void)

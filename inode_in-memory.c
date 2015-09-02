@@ -10,7 +10,6 @@ struct inode *inode_get(uint32_t ino, struct ext4_inode *raw_inode)
 	inode->i_ino = ino;
 	inode->i_data_dirty = 0;
 	inode->raw_inode = raw_inode;
-	inode->i_data = raw_inode->i_block;
 	return inode;
 }
 

@@ -1,10 +1,11 @@
 #ifndef INODE_IN_MEMORY_H
 #define INODE_IN_MEMORY_H
 
+#define i_data raw_inode->i_block
+
 struct inode {
 	int i_data_dirty;
 	uint32_t i_ino;
-	uint32_t *i_data;
 	struct ext4_inode *raw_inode;
 };
 
