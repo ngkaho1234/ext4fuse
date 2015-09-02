@@ -22,7 +22,7 @@
 
 
 /* We truncate the read size if it exceeds the limits of the file. */
-static size_t truncate_size(struct ext4_inode *inode, size_t size, size_t offset)
+static size_t truncate_size(struct inode *inode, size_t size, size_t offset)
 {
     uint64_t inode_size = inode_get_size(inode);
 
@@ -41,7 +41,7 @@ static size_t truncate_size(struct ext4_inode *inode, size_t size, size_t offset
 }
 
 /* This function reads all necessary data until the offset is aligned */
-static size_t first_read(struct ext4_inode *inode, char *buf, size_t size, off_t offset)
+static size_t first_read(struct inode *inode, char *buf, size_t size, off_t offset)
 {
     /* Reason for the -1 is that offset = 0 and size = BLOCK_SIZE is all on the
      * same block.  Meaning that byte at offset + size is not actually read. */
@@ -71,28 +71,34 @@ static size_t first_read(struct ext4_inode *inode, char *buf, size_t size, off_t
 int op_read(const char *path, char *buf, size_t size, off_t offset,
             struct fuse_file_info *fi)
 {
-    struct ext4_inode inode;
+    struct ext4_inode raw_inode;
+    struct inode *inode;
     size_t ret = 0;
-    uint32_t extent_len;
+    uint32_t extent_len, ino;
 
     /* Not sure if this is possible at all... */
     ASSERT(offset >= 0);
 
     DEBUG("read(%s, buf, %zd, %llu, fi->fh=%d)", path, size, offset, fi->fh);
-    int inode_get_ret = inode_get_by_number(fi->fh, &inode);
+    ino = fi->fh;
+    int inode_get_ret = inode_get_by_number(fi->fh, &raw_inode);
 
     if (inode_get_ret < 0) {
         return inode_get_ret;
     }
 
-    size = truncate_size(&inode, size, offset);
-    ret = first_read(&inode, buf, size, offset);
+    inode = inode_get(ino, &raw_inode);
+    if (!inode)
+        return -ENOMEM;
+
+    size = truncate_size(inode, size, offset);
+    ret = first_read(inode, buf, size, offset);
 
     buf += ret;
     offset += ret;
 
     for (unsigned int lblock = offset / BLOCK_SIZE; size > ret; lblock += extent_len) {
-        uint64_t pblock = inode_get_data_pblock(&inode, lblock, &extent_len, 0);
+        uint64_t pblock = inode_get_data_pblock(inode, lblock, &extent_len, 0);
         size_t bytes;
 
         if (pblock) {
@@ -109,6 +115,8 @@ int op_read(const char *path, char *buf, size_t size, off_t offset,
         buf += bytes;
         DEBUG("Read %zd/%zd bytes from %d consecutive blocks", ret, size, extent_len);
     }
+
+    inode_put(inode);
 
     /* We always read as many bytes as requested (after initial truncation) */
     ASSERT(size == ret);

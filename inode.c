@@ -67,26 +67,26 @@ static uint32_t __inode_get_data_pblock_tind(uint32_t lblock, uint32_t tindex_bl
 /* Get pblock for a given inode and lblock.  If extent is not NULL, it will
  * store the length of extent, that is, the number of consecutive pblocks
  * that are also consecutive lblocks (not counting the requested one). */
-uint64_t inode_get_data_pblock(struct ext4_inode *inode, uint32_t lblock, uint32_t *extent_len, uint32_t create_ino)
+uint64_t inode_get_data_pblock(struct inode *inode, uint32_t lblock, uint32_t *extent_len, int create)
 {
-    if (extent_len && !create_ino) *extent_len = 1;
+    if (extent_len && !create) *extent_len = 1;
 
-    if (inode->i_flags & EXT4_EXTENTS_FL) {
-        return extent_get_pblock_new(inode, lblock, extent_len, create_ino);
+    if (inode->raw_inode->i_flags & EXT4_EXTENTS_FL) {
+        return extent_get_pblock_new(inode, lblock, extent_len, create);
     } else {
         ASSERT(lblock <= BYTES2BLOCKS(inode_get_size(inode)));
-        ASSERT(!create_ino);
+        ASSERT(!create);
 
         if (lblock < EXT4_NDIR_BLOCKS) {
-            return inode->i_block[lblock];
+            return inode->i_data[lblock];
         } else if (lblock < MAX_IND_BLOCK) {
-            uint32_t index_block = inode->i_block[EXT4_IND_BLOCK];
+            uint32_t index_block = inode->i_data[EXT4_IND_BLOCK];
             return __inode_get_data_pblock_ind(lblock - EXT4_NDIR_BLOCKS, index_block);
         } else if (lblock < MAX_DIND_BLOCK) {
-            uint32_t dindex_block = inode->i_block[EXT4_DIND_BLOCK];
+            uint32_t dindex_block = inode->i_data[EXT4_DIND_BLOCK];
             return __inode_get_data_pblock_dind(lblock - MAX_IND_BLOCK, dindex_block);
         } else if (lblock < MAX_TIND_BLOCK) {
-            uint32_t tindex_block = inode->i_block[EXT4_TIND_BLOCK];
+            uint32_t tindex_block = inode->i_data[EXT4_TIND_BLOCK];
             return __inode_get_data_pblock_tind(lblock - MAX_DIND_BLOCK, tindex_block);
         } else {
             /* File-system corruption? */
@@ -106,9 +106,12 @@ int inode_remove_data_pblock(struct inode *inode, ext4_lblk_t from)
     return ext4_ext_remove_space(inode, from, -1UL);
 }
 
-static void dir_ctx_update(struct ext4_inode *inode, uint32_t lblock, struct inode_dir_ctx *ctx)
+static void dir_ctx_update(struct ext4_inode *raw_inode, uint32_t lblock, struct inode_dir_ctx *ctx)
 {
-    uint64_t dir_pblock = inode_get_data_pblock(inode, lblock, NULL, 0);
+    uint64_t dir_pblock;
+    struct inode *inode = inode_get(0, raw_inode);
+    dir_pblock = inode_get_data_pblock(inode, lblock, NULL, 0);
+    inode_put(inode);
     disk_read_block(dir_pblock, ctx->buf);
     ctx->lblock = lblock;
 }
@@ -128,12 +131,19 @@ void inode_dir_ctx_put(struct inode_dir_ctx *ctx)
     free(ctx);
 }
 
-struct ext4_dir_entry_2 *inode_dentry_get(struct ext4_inode *inode, off_t offset, struct inode_dir_ctx *ctx)
+struct ext4_dir_entry_2 *inode_dentry_get(struct ext4_inode *raw_inode, off_t offset, struct inode_dir_ctx *ctx)
 {
     uint32_t lblock = offset / BLOCK_SIZE;
     uint32_t blk_offset = offset % BLOCK_SIZE;
-    uint64_t inode_size = inode_get_size(inode);
+    uint64_t inode_size;
     size_t un_offset = (size_t)offset;
+
+    struct inode *inode = inode_get(0, raw_inode);
+    if (!inode) {
+        return NULL;
+    }
+    inode_size = inode_get_size(inode);
+    inode_put(inode);
 
     DEBUG("%zd/%"PRIu64"", un_offset, inode_size);
     ASSERT(inode_size >= un_offset);
@@ -144,8 +154,8 @@ struct ext4_dir_entry_2 *inode_dentry_get(struct ext4_inode *inode, off_t offset
     if (lblock == ctx->lblock) {
         return (struct ext4_dir_entry_2 *)&ctx->buf[blk_offset];
     } else {
-        dir_ctx_update(inode, lblock, ctx);
-        return inode_dentry_get(inode, un_offset, ctx);
+        dir_ctx_update(raw_inode, lblock, ctx);
+        return inode_dentry_get(raw_inode, un_offset, ctx);
     }
 }
 

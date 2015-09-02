@@ -33,7 +33,7 @@
 
 static inline int ext4_mark_inode_dirty(struct inode *inode)
 {
-	inode->i_data_dirty = 1;
+	inode_mark_dirty(inode);
 	return 0;
 }
 
@@ -1637,14 +1637,13 @@ out2:
 	return err ? err : allocated;
 }
 
-uint64_t extent_get_pblock_new(struct ext4_inode *raw_inode, uint32_t lblock, uint32_t *len, uint32_t create_ino)
+uint64_t extent_get_pblock_new(struct inode *inode, uint32_t lblock, uint32_t *len, int create)
 {
-	struct inode *inode = inode_get(create_ino, raw_inode);
 	uint64_t ret_block = 0;
 	int ret_len = 0;
 	struct buffer_head bh_result = { 0 };
 
-	if (create_ino) {
+	if (create) {
 		int wanted_len;
 		if (len)
 			wanted_len = *len;
@@ -1662,8 +1661,6 @@ uint64_t extent_get_pblock_new(struct ext4_inode *raw_inode, uint32_t lblock, ui
 	if (ret_len <= 0)
 		ret_len = 0;
 
-	if (inode)
-		inode_put(inode);
 	if (len)
 		*len = ret_len;
 	ret_block = bh_result.b_blocknr;

@@ -20,7 +20,7 @@ static inline void inode_set_size(struct inode *inode, uint64_t size)
 {
     inode->raw_inode->i_size_lo = (uint32_t)size;
     inode->raw_inode->i_size_high = (uint32_t)(size >> 32);
-    inode->i_data_dirty = 1;
+    inode_mark_dirty(inode);
 }
 
 #endif

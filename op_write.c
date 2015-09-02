@@ -21,7 +21,7 @@
 #include "ops.h"
 
 /* This function write all necessary data until the offset is aligned */
-static size_t first_write(uint32_t ino, struct ext4_inode *inode, const char *buf, size_t size, off_t offset)
+static size_t first_write(struct inode *inode, const char *buf, size_t size, off_t offset)
 {
     /* Reason for the -1 is that offset = 0 and size = BLOCK_SIZE is all on the
      * same block.  Meaning that byte at offset + size is not actually read. */
@@ -33,7 +33,7 @@ static size_t first_write(uint32_t ino, struct ext4_inode *inode, const char *bu
     if (size == 0) return 0;
     if (start_block_off == 0) return 0;
 
-    uint64_t start_pblock = inode_get_data_pblock(inode, start_lblock, NULL, ino);
+    uint64_t start_pblock = inode_get_data_pblock(inode, start_lblock, NULL, 1);
 
     /* Check if all the read request lays on the same block */
     if (start_lblock == end_lblock) {
@@ -52,6 +52,7 @@ int op_write(const char *path, const char *buf, size_t size, off_t offset,
             struct fuse_file_info *fi)
 {
     struct ext4_inode raw_inode;
+    struct inode *inode;
     size_t ret = 0;
     uint32_t extent_len, ino;
     uint64_t orig_size;
@@ -60,14 +61,20 @@ int op_write(const char *path, const char *buf, size_t size, off_t offset,
     ASSERT(offset >= 0);
 
     DEBUG("write(%s, buf, %zd, %llu, fi->fh=%d)", path, size, offset, fi->fh);
-    int inode_get_ret = inode_get_by_number(ino = fi->fh, &raw_inode);
+    ino = fi->fh;
+    int inode_get_ret = inode_get_by_number(ino, &raw_inode);
 
     if (inode_get_ret < 0) {
         return inode_get_ret;
     }
-    orig_size = inode_get_size(&raw_inode);
 
-    ret = first_write(ino, &raw_inode, buf, size, offset);
+    inode = inode_get(ino, &raw_inode);
+    if (!inode)
+        return -ENOMEM;
+
+    orig_size = inode_get_size(inode);
+
+    ret = first_write(inode, buf, size, offset);
 
     buf += ret;
     offset += ret;
@@ -75,7 +82,7 @@ int op_write(const char *path, const char *buf, size_t size, off_t offset,
     for (ext4_lblk_t lblock = offset / BLOCK_SIZE; size > ret; lblock += extent_len) {
         uint64_t pblock;
         extent_len = (size - ret + super_block_size() - 1) / super_block_size();
-        pblock = inode_get_data_pblock(&raw_inode, lblock, &extent_len, ino);
+        pblock = inode_get_data_pblock(inode, lblock, &extent_len, ino);
         size_t bytes;
 
         if (pblock) {
@@ -92,12 +99,10 @@ int op_write(const char *path, const char *buf, size_t size, off_t offset,
         DEBUG("Write %zd/%zd bytes from %d consecutive blocks %lu", ret, size, extent_len, lblock);
     }
 
-    if ((off_t)orig_size < offset + ret) {
-        struct inode *inode = inode_get(ino, &raw_inode);
-        ASSERT(inode);
+    if ((off_t)orig_size < offset + ret)
         inode_set_size(inode, offset + ret);
-        inode_put(inode);
-    }
+
+    inode_put(inode);
 
     /* We always read as many bytes as requested (after initial truncation) */
     ASSERT(size == ret);
