@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <pthread.h>
 #include <errno.h>
+
 #include "types/rbtree.h"
 #include "types/list.h"
 #include "disk.h"
@@ -55,12 +56,11 @@ struct block_device {
 	pthread_mutex_t bd_bh_dirty_lock;
 	struct list_head bd_bh_dirty;
 
+	pthread_mutex_t bd_bh_root_lock;
 	struct rb_root bd_bh_root;
 
 	pthread_t bd_bh_writeback_thread;
-	int bd_bh_writeback_wakeup;
-
-	int bd_bh_writeback_exiting;
+	int bd_bh_writeback_wakeup_fd[2];
 };
 
 struct super_block
@@ -200,7 +200,6 @@ struct block_device *bdev_alloc(int fd, int blocksize_bits);
 void bdev_free(struct block_device *bdev);
 struct buffer_head *buffer_alloc(struct block_device *bdev, uint64_t block,
 				 int page_size);
-void buffer_free(struct buffer_head *bh);
 void brelse(struct buffer_head *bh);
 int bh_submit_read(struct buffer_head *bh);
 
