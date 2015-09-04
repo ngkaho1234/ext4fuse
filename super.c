@@ -15,6 +15,7 @@
 #include "super.h"
 #include "inode.h"
 #include "buffer.h"
+#include "ext4_crc.h"
 
 static struct ext4_super_block super_block;
 static int super_block_dirty = 0;
@@ -547,6 +548,39 @@ void ext4_set_inode_blocks(struct inode *inode, ext4_fsblk_t blocks)
     inode_mark_dirty(inode);
 }
 
+/*
+ * Calculate a CRC16 checksum against a block group descriptor.
+ */
+static uint16_t ext4_gdesc_checksum(ext4_group_t block_group)
+{
+    /* If checksum not supported, 0 will be returned */
+    uint16_t crc = 0;
+    struct ext4_group_desc *gdesc;
+
+    /* Compute the checksum only if the filesystem supports it */
+    if (EXT4_HAS_RO_COMPAT_FEATURE(&super_block, EXT4_FEATURE_RO_COMPAT_GDT_CSUM)) {
+        gdesc = &gdesc_table[block_group].gdesc;
+
+        int first_part_size = (int)((char *)&gdesc->bg_checksum - (char *)gdesc);
+
+        /* Initialization */
+        crc = ext4_crc16(~0, super_block.s_uuid, sizeof(super_block.s_uuid));
+        /* Compute crc against the block group no. */
+        crc = ext4_crc16(crc, &block_group, sizeof(ext4_group_t));
+        /* Compute crc from the first part (stop before checksum field) */
+        crc = ext4_crc16(crc, gdesc, first_part_size);
+
+        /* Checksum of the rest of block group descriptor */
+        if (EXT4_HAS_INCOMPAT_FEATURE(&super_block,
+                                              EXT4_FEATURE_INCOMPAT_64BIT)) {
+            crc = ext4_crc16(crc, (char *)gdesc + EXT4_MIN_DESC_SIZE,
+                                EXT4_MIN_DESC_SIZE_64BIT - EXT4_MIN_DESC_SIZE);
+        }
+    }
+
+    return crc;
+}
+
 int super_fill(void)
 {
     disk_read(BOOT_SECTOR_SIZE, sizeof(struct ext4_super_block), &super_block);
@@ -638,7 +672,9 @@ int super_group_writeback(void)
         /* disk advances super_group_desc_size(), pointer sizeof(struct...).
          * These values might be different!!! */
         if (gdesc_table[i].dirty) {
-                disk_write(bg_off, super_group_desc_size(), &gdesc_table[i].gdesc);
+                struct ext4_group_desc *gdesc = &gdesc_table[i].gdesc;
+                gdesc->bg_checksum = ext4_gdesc_checksum(i);
+                disk_write(bg_off, super_group_desc_size(), gdesc);
                 gdesc_table[i].dirty = 0;
         }
     }
