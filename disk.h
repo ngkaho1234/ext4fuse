@@ -5,6 +5,8 @@
 
 #include "types/ext4_basic.h"
 
+#define PREAD_BLOCK_SIZE 4096
+
 #define disk_read(__where, __s, __p)        __disk_read(__where, __s, __p, __func__, __LINE__)
 #define disk_write(__where, __s, __p)        __disk_write(__where, __s, __p, __func__, __LINE__)
 #define disk_read_block(__blocks, __p)      __disk_read(BLOCKS2BYTES(__blocks), BLOCK_SIZE, __p, __func__, __LINE__)

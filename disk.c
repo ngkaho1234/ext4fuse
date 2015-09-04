@@ -30,7 +30,6 @@ static int disk_fd = -1;
 static int pread_wrapper(int disk_fd, void *p, size_t size, off_t where)
 {
 #if defined(__FreeBSD__) && !defined(__APPLE__)
-#define PREAD_BLOCK_SIZE 1024
     /* FreeBSD needs to read aligned whole blocks.
      * TODO: Check what is a safe block size.
      */

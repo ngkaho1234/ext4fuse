@@ -32,27 +32,127 @@ static int buffer_writeback_ms = 1000;
  * Pseduo device reading routine.
  * Actually we are reading data from a file.
  */
+static int pread_wrapper(int disk_fd, void *p, size_t size, off_t where)
+{
+#if defined(__FreeBSD__) && !defined(__APPLE__)
+	/* FreeBSD needs to read aligned whole blocks.
+	 * TODO: Check what is a safe block size.
+	 */
+	static __thread uint8_t block[PREAD_BLOCK_SIZE];
+	off_t first_offset = where % PREAD_BLOCK_SIZE;
+	int ret = 0;
+
+	if (first_offset) {
+		/* This is the case if the read doesn't start on a block boundary.
+		 * We still need to read the whole block and we do, but we only copy to
+		 * the out pointer the bytes that where actually asked for.  In this
+		 * case first_offset is the offset into the block. */
+		int pread_ret = pread(disk_fd, block, PREAD_BLOCK_SIZE, where - first_offset);
+		ASSERT(pread_ret == PREAD_BLOCK_SIZE);
+
+		size_t first_size = MIN(size, (size_t)(PREAD_BLOCK_SIZE - first_offset));
+		memcpy(p, block + first_offset, first_size);
+		p += first_size;
+		size -= first_size;
+		where += first_size;
+		ret += first_size;
+
+		if (!size) return ret;
+	}
+
+	ASSERT(where % PREAD_BLOCK_SIZE == 0);
+
+	size_t mid_read_size = (size / PREAD_BLOCK_SIZE) * PREAD_BLOCK_SIZE;
+	if (mid_read_size) {
+		int pread_ret_mid = pread(disk_fd, p, mid_read_size, where);
+		ASSERT((size_t)pread_ret_mid == mid_read_size);
+
+		p += mid_read_size;
+		size -= mid_read_size;
+		where += mid_read_size;
+		ret += mid_read_size;
+
+		if (!size) return ret;
+	}
+
+	ASSERT(size < PREAD_BLOCK_SIZE);
+
+	int pread_ret_last = pread(disk_fd, block, PREAD_BLOCK_SIZE, where);
+	ASSERT(pread_ret_last == PREAD_BLOCK_SIZE);
+
+	memcpy(p, block, size);
+
+	return ret + size;
+#else
+	return pread(disk_fd, p, size, where);
+#endif
+}
+
+static int pwrite_wrapper(int disk_fd, const void *p, size_t size, off_t where)
+{
+#if defined(__FreeBSD__) && !defined(__APPLE__)
+	/* FreeBSD needs to read aligned whole blocks.
+	 * TODO: Check what is a safe block size.
+	 */
+	static __thread uint8_t block[PREAD_BLOCK_SIZE];
+	off_t first_offset = where % PREAD_BLOCK_SIZE;
+	int ret = 0;
+
+	if (first_offset) {
+		/* This is the case if the read doesn't start on a block boundary.
+		 * We still need to read the whole block and we do, but we only copy to
+		 * the out pointer the bytes that where actually asked for.  In this
+		 * case first_offset is the offset into the block. */
+		int pread_ret = pread(disk_fd, block, PREAD_BLOCK_SIZE, where - first_offset);
+		ASSERT(pread_ret == PREAD_BLOCK_SIZE);
+		size_t first_size = MIN(size, (size_t)(PREAD_BLOCK_SIZE - first_offset));
+		memcpy(block + first_offset, p, first_size);
+
+		pread_ret = pwrite(disk_fd, block, PREAD_BLOCK_SIZE, where - first_offset);
+		p += first_size;
+		size -= first_size;
+		where += first_size;
+		ret += first_size;
+
+		if (!size) return ret;
+	}
+
+	ASSERT(where % PREAD_BLOCK_SIZE == 0);
+
+	size_t mid_write_size = (size / PREAD_BLOCK_SIZE) * PREAD_BLOCK_SIZE;
+	if (mid_write_size) {
+		int pwrite_ret_mid = pwrite(disk_fd, p, mid_write_size, where);
+		ASSERT((size_t)pwrite_ret_mid == mid_write_size);
+
+		p += mid_write_size;
+		size -= mid_write_size;
+		where += mid_write_size;
+		ret += mid_write_size;
+
+		if (!size) return ret;
+	}
+
+	ASSERT(size < PREAD_BLOCK_SIZE);
+
+	int pread_ret_last = pread(disk_fd, block, PREAD_BLOCK_SIZE, where);
+	ASSERT(pread_ret_last == PREAD_BLOCK_SIZE);
+
+	memcpy(block, p, size);
+	pread_ret_last = pwrite(disk_fd, block, PREAD_BLOCK_SIZE, where);
+
+	return ret + size;
+#else
+	return pwrite(disk_fd, p, size, where);
+#endif
+}
+
 static int device_read(int fd, uint64_t block, int count, int blk_size,
 		       void *buf)
 {
-	int ret;
-	static int rdcount;
-	uint64_t off, seek_ret;
-
-	off = block * blk_size;
-	/*
-	 * lseek64 is a wrap-up libcall of llseek.
-	 */
-	seek_ret = lseek64(fd, off, 0);
-	if (seek_ret < 0) {
-		return -1;
-	}
-
-	ret = read(fd, buf, blk_size * count);
+	int ret = pread_wrapper(fd, buf, blk_size * count, block * blk_size);
 	if (ret < 0) {
 		return -1;
 	}
-	rdcount++;
 
 	return ret;
 }
@@ -64,19 +164,7 @@ static int device_read(int fd, uint64_t block, int count, int blk_size,
 static int device_write(int fd, uint64_t block, int count, int blk_size,
 			void *buf)
 {
-	int ret;
-	uint64_t off, seek_ret;
-
-	off = block * blk_size;
-	/*
-	 * lseek64 is a wrap-up libcall of llseek.
-	 */
-	seek_ret = lseek64(fd, off, 0);
-	if (seek_ret < 0) {
-		return -1;
-	}
-
-	ret = write(fd, buf, blk_size * count);
+	int ret = pwrite_wrapper(fd, buf, blk_size * count, block * blk_size);
 	if (ret < 0) {
 		return -1;
 	}
@@ -145,6 +233,7 @@ static void __buffer_remove(struct block_device *bdev,
 	rb_erase(&bh->b_rb_node, &bdev->bd_bh_root);
 }
 
+
 static void *buffer_writeback(void *arg);
 
 struct block_device *bdev_alloc(int fd, int blocksize_bits)
@@ -178,6 +267,7 @@ struct block_device *bdev_alloc(int fd, int blocksize_bits)
 	return bdev;
 }
 
+
 static void bdev_writeback_thread_notify(struct block_device *bdev)
 {
 	signed char test_byte = 1;
@@ -203,6 +293,7 @@ static int bdev_is_notify_exiting(signed char byte)
 		return 1;
 	return 0;
 }
+
 
 static int sync_dirty_buffer(struct buffer_head *bh);
 static void detach_bh_from_freelist(struct buffer_head *bh);
@@ -245,11 +336,13 @@ void bdev_free(struct block_device *bdev)
 	free(bdev);
 }
 
+
 static void sync_writeback_buffers(struct block_device *bdev)
 {
 	if (buffer_dirty_count > buffer_dirty_threshold)
 		bdev_writeback_thread_notify(bdev);
 }
+
 
 struct buffer_head *buffer_alloc(struct block_device *bdev, uint64_t block,
 				 int page_size)
@@ -285,6 +378,7 @@ static void buffer_free(struct buffer_head *bh)
 
 	free(bh);
 }
+
 
 static void
 attach_bh_to_freelist(struct buffer_head *bh)
@@ -332,6 +426,7 @@ remove_first_bh_from_freelist(struct block_device *bdev)
 	buffer_free(bh);
 }
 
+
 static void move_buffer_to_writeback(struct buffer_head *bh)
 {
 	struct block_device *bdev = bh->b_bdev;
@@ -373,6 +468,7 @@ static void remove_buffer_from_writeback(struct buffer_head *bh)
 	pthread_mutex_unlock(&bdev->bd_bh_dirty_lock);
 }
 
+
 static void try_to_drop_buffers(struct block_device *bdev)
 {
 	while (bdev->bd_nr_free > buffer_free_threshold) {
@@ -385,6 +481,7 @@ static void reclaim_buffer(struct buffer_head *bh)
 	try_to_drop_buffers(bh->b_bdev);
 	attach_bh_to_freelist(bh);
 }
+
 
 /*
  * Submit an IO request.
@@ -429,28 +526,6 @@ void after_buffer_sync(struct buffer_head *bh, int uptodate)
 	unlock_buffer(bh);
 }
 
-struct buffer_head *__getblk(struct block_device *bdev, uint64_t block,
-			     int bsize)
-{
-	struct buffer_head *bh;
-
-	bh = buffer_search(bdev, block);
-	if (bh) {
-		detach_bh_from_freelist(bh);
-		remove_buffer_from_writeback(bh);
-		get_bh(bh);
-		return bh;
-	}
-	bh = buffer_alloc(bdev, block, bsize);
-	if (bh == NULL)
-		return NULL;
-
-	buffer_insert(bdev, bh);
-
-	get_bh(bh);
-	return bh;
-}
-
 void after_submit_read(struct buffer_head *bh, int uptodate)
 {
 	if (uptodate)
@@ -478,6 +553,47 @@ int bh_submit_read(struct buffer_head *bh)
 	return ret;
 }
 
+static int sync_dirty_buffer(struct buffer_head *bh)
+{
+	int ret = 0;
+
+	if (!trylock_buffer(bh))
+		return ret;
+
+	assert(bh->b_count >= 0);
+	if (bh->b_count < 1 && buffer_dirty(bh)) {
+		get_bh(bh);
+		bh->b_end_io = after_buffer_sync;
+		ret = submit_bh(WRITE, bh);
+	} else {
+		unlock_buffer(bh);
+	}
+	return ret;
+}
+
+
+struct buffer_head *__getblk(struct block_device *bdev, uint64_t block,
+			     int bsize)
+{
+	struct buffer_head *bh;
+
+	bh = buffer_search(bdev, block);
+	if (bh) {
+		detach_bh_from_freelist(bh);
+		remove_buffer_from_writeback(bh);
+		get_bh(bh);
+		return bh;
+	}
+	bh = buffer_alloc(bdev, block, bsize);
+	if (bh == NULL)
+		return NULL;
+
+	buffer_insert(bdev, bh);
+
+	get_bh(bh);
+	return bh;
+}
+
 /*
  * Release the buffer_head.
  */
@@ -501,23 +617,6 @@ out:
 	return;
 }
 
-static int sync_dirty_buffer(struct buffer_head *bh)
-{
-	int ret = 0;
-
-	if (!trylock_buffer(bh))
-		return ret;
-
-	assert(bh->b_count >= 0);
-	if (bh->b_count < 1 && buffer_dirty(bh)) {
-		get_bh(bh);
-		bh->b_end_io = after_buffer_sync;
-		ret = submit_bh(WRITE, bh);
-	} else {
-		unlock_buffer(bh);
-	}
-	return ret;
-}
 
 static void try_to_sync_buffers(struct block_device *bdev)
 {
