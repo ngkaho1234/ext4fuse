@@ -28,8 +28,6 @@ static int buffer_dirty_threshold = 9;
 static int buffer_dirty_count = 0;
 static int buffer_writeback_ms = 10000;
 
-#undef USE_AIO
-
 #ifndef USE_AIO
 /*
  * Pseduo device reading routine.
@@ -525,7 +523,7 @@ void wait_on_buffer(struct buffer_head *bh)
  * Submit an IO request.
  * FIXME: any calls to submit_bh are supposed to be non-blocking.
  */
-int submit_bh(int is_write, struct buffer_head *bh)
+int __submit_bh(int is_write, struct buffer_head *bh)
 {
 	int ret;
 	struct block_device *bdev = bh->b_bdev;
@@ -576,6 +574,11 @@ int submit_bh(int is_write, struct buffer_head *bh)
 	}
 
 	return 0;
+}
+
+int submit_bh(int is_write, struct buffer_head *bh)
+{
+	return __submit_bh(is_write, bh);
 }
 
 void after_buffer_sync(struct buffer_head *bh, int uptodate)

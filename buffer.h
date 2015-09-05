@@ -66,6 +66,7 @@ struct block_device {
 	pthread_mutex_t bd_bh_root_lock;
 	struct rb_root bd_bh_root;
 
+	pthread_t bd_bh_readahead_thread;
 	pthread_t bd_bh_writeback_thread;
 	int bd_bh_writeback_wakeup_fd[2];
 };
