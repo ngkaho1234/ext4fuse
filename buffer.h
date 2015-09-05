@@ -3,7 +3,14 @@
 
 #include <stddef.h>
 #include <pthread.h>
+#include <sys/eventfd.h>
 #include <errno.h>
+
+#define USE_AIO
+#ifdef USE_AIO
+#include <aio.h>
+#include <signal.h>
+#endif
 
 #include "types/rbtree.h"
 #include "types/list.h"
@@ -92,6 +99,11 @@ struct buffer_head
 	size_t b_size;      /* size of mapping */
 	char *b_data;       /* pointer to data within the page */
 	char *b_page;       /* pointer to data within the page */
+
+#ifdef USE_AIO
+	struct aiocb b_aiocb;
+	int b_event;
+#endif
 
 	struct block_device *b_bdev;
 	bh_end_io_t *b_end_io; /* I/O completion */
@@ -202,6 +214,7 @@ struct buffer_head *buffer_alloc(struct block_device *bdev, uint64_t block,
 				 int page_size);
 void brelse(struct buffer_head *bh);
 int bh_submit_read(struct buffer_head *bh);
+void wait_on_buffer(struct buffer_head *bh);
 
 /* bufops.c */
 int fs_cache_init(void);

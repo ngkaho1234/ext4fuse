@@ -93,6 +93,7 @@ void signal_handle_sigsegv(int signal)
 
     for (i = 0; i < size; i++)
         DEBUG("%s", strings[i]);
+    DEBUG("========================= %d items.", size);
     DEBUG("========================================");
 
     abort();

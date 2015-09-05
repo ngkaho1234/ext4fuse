@@ -4,6 +4,7 @@
 
 #include "super.h"
 #include "buffer.h"
+#include "logging.h"
 
 static int fs_bh_alloc = 0;
 static int fs_bh_freed = 0;
@@ -34,6 +35,8 @@ struct buffer_head *fs_bread(ext4_fsblk_t block, int *ret)
 	err = bh_submit_read(bh);
 	if (ret)
 		*ret = err;
+	DEBUG("Wait on bh: 0x%p ", bh);
+	wait_on_buffer(bh);
 	if (bh)
 		fs_bh_alloc++;
 

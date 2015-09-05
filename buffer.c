@@ -26,8 +26,11 @@
 static int buffer_free_threshold = 90000;
 static int buffer_dirty_threshold = 9;
 static int buffer_dirty_count = 0;
-static int buffer_writeback_ms = 1000;
+static int buffer_writeback_ms = 10000;
 
+#undef USE_AIO
+
+#ifndef USE_AIO
 /*
  * Pseduo device reading routine.
  * Actually we are reading data from a file.
@@ -171,6 +174,8 @@ static int device_write(int fd, uint64_t block, int count, int blk_size,
 	return ret;
 }
 
+#endif
+
 static struct buffer_head *__buffer_search(struct rb_root *root,
 					   uint64_t blocknr)
 {
@@ -311,6 +316,7 @@ void bdev_free(struct block_device *bdev)
 		cur = list_first_entry(&bdev->bd_bh_dirty,
 				       struct buffer_head, b_dirty_list);
 		sync_dirty_buffer(cur);
+		wait_on_buffer(cur);
 	}
 
 	pthread_mutex_lock(&bdev->bd_bh_root_lock);
@@ -360,6 +366,8 @@ struct buffer_head *buffer_alloc(struct block_device *bdev, uint64_t block,
 	bh->b_count = 0;
 	bh->b_page = NULL;
 
+	bh->b_event = eventfd(1, 0);
+
 	pthread_mutex_init(&bh->b_lock, NULL);
 	INIT_LIST_HEAD(&bh->b_freelist);
 	INIT_LIST_HEAD(&bh->b_dirty_list);
@@ -371,6 +379,7 @@ struct buffer_head *buffer_alloc(struct block_device *bdev, uint64_t block,
 
 static void buffer_free(struct buffer_head *bh)
 {
+	close(bh->b_event);
 	pthread_mutex_destroy(&bh->b_lock);
 
 	if (bh->b_count != 0)
@@ -482,6 +491,35 @@ static void reclaim_buffer(struct buffer_head *bh)
 	attach_bh_to_freelist(bh);
 }
 
+#ifdef USE_AIO
+#define IO_SIGNAL SIGIO
+
+void iocb_dispatch(union sigval value)
+{
+	struct buffer_head *bh = value.sival_ptr;
+	int err;
+	if (!bh)
+		return;
+
+	err = aio_error(&bh->b_aiocb);
+	if (err < 0)
+		bh->b_end_io(bh, 0);
+	else
+		bh->b_end_io(bh, 1);
+}
+
+#endif
+
+void wait_on_buffer(struct buffer_head *bh)
+{
+#ifdef USE_AIO
+	eventfd_t no;
+	/*const struct aiocb const *aiocb_list[2] = {&bh->b_aiocb, NULL};*/
+	/*aio_suspend(aiocb_list, 1, NULL);*/
+	eventfd_read(bh->b_event, &no);
+	eventfd_write(bh->b_event, 1);
+#endif
+}
 
 /*
  * Submit an IO request.
@@ -493,22 +531,48 @@ int submit_bh(int is_write, struct buffer_head *bh)
 	struct block_device *bdev = bh->b_bdev;
 
 	if (is_write == 0) {
+#ifndef USE_AIO
 		/*memcpy(bh->b_data, bh->b_page, bh->b_size);*/
 		ret = device_read(bdev->bd_fd, bh->b_blocknr, 1,
 				   bh->b_size, bh->b_data);
 		if (ret < 0)
 			bh->b_end_io(bh, 0);
-		bh->b_end_io(bh, 1);
+		else
+			bh->b_end_io(bh, 1);
+#else
+		eventfd_t no;
+		bh->b_aiocb.aio_fildes = bdev->bd_fd;
+		bh->b_aiocb.aio_buf = bh->b_data;
+		bh->b_aiocb.aio_nbytes = bh->b_size;
+		bh->b_aiocb.aio_reqprio = 0;
+		bh->b_aiocb.aio_offset = bh->b_blocknr * bh->b_size;
+		bh->b_aiocb.aio_sigevent.sigev_notify = SIGEV_THREAD;
+		bh->b_aiocb.aio_sigevent.sigev_notify_function = iocb_dispatch;
+		bh->b_aiocb.aio_sigevent.sigev_value.sival_ptr = bh;
+		eventfd_read(bh->b_event, &no);
+		aio_read(&bh->b_aiocb);
+#endif
 	} else {
-		if (bh->b_page) {
-			memcpy(bh->b_page, bh->b_data, bh->b_size);
-		} else {
-			ret = device_write(bdev->bd_fd, bh->b_blocknr, 1,
-					   bh->b_size, bh->b_data);
-			if (ret < 0)
-				bh->b_end_io(bh, 0);
-		}
-		bh->b_end_io(bh, 1);
+#ifndef USE_AIO
+		ret = device_write(bdev->bd_fd, bh->b_blocknr, 1,
+				   bh->b_size, bh->b_data);
+		if (ret < 0)
+			bh->b_end_io(bh, 0);
+		else
+			bh->b_end_io(bh, 1);
+#else
+		eventfd_t no;
+		bh->b_aiocb.aio_fildes = bdev->bd_fd;
+		bh->b_aiocb.aio_buf = bh->b_data;
+		bh->b_aiocb.aio_nbytes = bh->b_size;
+		bh->b_aiocb.aio_reqprio = 0;
+		bh->b_aiocb.aio_offset = bh->b_blocknr * bh->b_size;
+		bh->b_aiocb.aio_sigevent.sigev_notify = SIGEV_THREAD;
+		bh->b_aiocb.aio_sigevent.sigev_notify_function = iocb_dispatch;
+		bh->b_aiocb.aio_sigevent.sigev_value.sival_ptr = bh;
+		eventfd_read(bh->b_event, &no);
+		aio_write(&bh->b_aiocb);
+#endif
 	}
 
 	return 0;
@@ -524,6 +588,7 @@ void after_buffer_sync(struct buffer_head *bh, int uptodate)
 	clear_buffer_dirty(bh);
 	attach_bh_to_freelist(bh);
 	unlock_buffer(bh);
+	eventfd_write(bh->b_event, 1);
 }
 
 void after_submit_read(struct buffer_head *bh, int uptodate)
@@ -533,6 +598,7 @@ void after_submit_read(struct buffer_head *bh, int uptodate)
 
 	put_bh(bh);
 	unlock_buffer(bh);
+	eventfd_write(bh->b_event, 1);
 }
 
 int bh_submit_read(struct buffer_head *bh)
@@ -620,16 +686,15 @@ out:
 
 static void try_to_sync_buffers(struct block_device *bdev)
 {
-	int i, diff;
-	if (buffer_dirty_count > buffer_dirty_threshold) {
-		diff = buffer_dirty_count - buffer_dirty_threshold;
-		for (i = 0;i < diff;i++) {
-			struct buffer_head *cur;
-			cur = remove_first_buffer_from_writeback(bdev);
-			if (cur)
-				sync_dirty_buffer(cur);
+	while (1) {
+		struct buffer_head *cur;
+		cur = remove_first_buffer_from_writeback(bdev);
+		if (cur) {
+			sync_dirty_buffer(cur);
+			wait_on_buffer(cur);
+		} else
+			break;
 
-		}
 	}
 }
 
@@ -640,7 +705,9 @@ static void *buffer_writeback(void *arg)
 	int epfd = epoll_create(0);
 	if (epfd < 0)
 		return NULL;
+
 	epoll_ctl(epfd, EPOLL_CTL_ADD, bdev->bd_bh_writeback_wakeup_fd[0], &epev);
+
 	while (1) {
 		int ret;
 		ret = epoll_wait(epfd, &epev, 1, buffer_writeback_ms);
