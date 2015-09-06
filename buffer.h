@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 #include <pthread.h>
-#include <sys/eventfd.h>
+#include <semaphore.h>
 #include <errno.h>
 
 #define USE_AIO
@@ -63,11 +63,15 @@ struct block_device {
 	pthread_mutex_t bd_bh_dirty_lock;
 	struct list_head bd_bh_dirty;
 
+	pthread_mutex_t bd_bh_ioqueue_lock;
+	struct list_head bd_bh_ioqueue;
+
 	pthread_mutex_t bd_bh_root_lock;
 	struct rb_root bd_bh_root;
 
-	pthread_t bd_bh_readahead_thread;
+	pthread_t bd_bh_io_thread;
 	pthread_t bd_bh_writeback_thread;
+	int bd_bh_io_wakeup_fd[2];
 	int bd_bh_writeback_wakeup_fd[2];
 };
 
@@ -103,7 +107,7 @@ struct buffer_head
 
 #ifdef USE_AIO
 	struct aiocb b_aiocb;
-	int b_event;
+	sem_t b_event;
 #endif
 
 	struct block_device *b_bdev;
@@ -113,6 +117,7 @@ struct buffer_head
 	atomic_t b_count; /* users using this buffer_head */
 	pthread_mutex_t b_lock;
 
+	struct list_head b_io_list;
 	struct list_head b_dirty_list;
 	struct list_head b_freelist;
 	struct rb_node b_rb_node;
@@ -168,6 +173,7 @@ BUFFER_FNS(Meta, meta)
 BUFFER_FNS(Prio, prio)
 BUFFER_FNS(Async_Read, async_read)
 BUFFER_FNS(Async_Write, async_write)
+TAS_BUFFER_FNS(Async_Write, async_write)
 BUFFER_FNS(Delay, delay)
 BUFFER_FNS(Boundary, boundary)
 BUFFER_FNS(Write_EIO, write_io_error)

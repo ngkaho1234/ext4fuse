@@ -22,7 +22,7 @@ LDFLAGS += -lexecinfo
 endif
 
 BINARY = ext4fuse
-SOURCES += fuse-main.o logging.o extents.o disk.o super.o inode.o dcache.o bufops.o buffer.o bitmap.o rbtree.o extents/extents.o inode_in-memory.o alloc.o ext4_crc32.o ext4_crc16.o
+SOURCES += fuse-main.o logging.o disk.o super.o inode.o dcache.o bufops.o buffer.o bitmap.o rbtree.o extents/extents.o inode_in-memory.o alloc.o ext4_crc32.o ext4_crc16.o
 SOURCES += op_read.o op_readdir.o op_readlink.o op_init.o op_getattr.o op_open.o op_write.o op_truncate.o
 
 $(BINARY): $(SOURCES)

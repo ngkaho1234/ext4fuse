@@ -237,7 +237,11 @@ static void __buffer_remove(struct block_device *bdev,
 }
 
 
-static void *buffer_writeback(void *arg);
+#ifndef USE_AIO
+static void *buffer_io_thread(void *arg);
+#endif
+
+static void *buffer_writeback_thread(void *arg);
 
 struct block_device *bdev_alloc(int fd, int blocksize_bits)
 {
@@ -255,8 +259,14 @@ struct block_device *bdev_alloc(int fd, int blocksize_bits)
 
 	INIT_LIST_HEAD(&bdev->bd_bh_free);
 	INIT_LIST_HEAD(&bdev->bd_bh_dirty);
+#ifndef USE_AIO
+	INIT_LIST_HEAD(&bdev->bd_bh_ioqueue);
+#endif
 	pthread_mutex_init(&bdev->bd_bh_free_lock, NULL);
 	pthread_mutex_init(&bdev->bd_bh_dirty_lock, NULL);
+#ifndef USE_AIO
+	pthread_mutex_init(&bdev->bd_bh_ioqueue_lock, NULL);
+#endif
 	pthread_mutex_init(&bdev->bd_bh_root_lock, NULL);
 
 	super->s_blocksize_bits = blocksize_bits;
@@ -265,7 +275,13 @@ struct block_device *bdev_alloc(int fd, int blocksize_bits)
 
 	pipe(bdev->bd_bh_writeback_wakeup_fd);
 	pthread_create(&bdev->bd_bh_writeback_thread, NULL,
-			buffer_writeback, bdev);
+			buffer_writeback_thread, bdev);
+
+#ifndef USE_AIO
+	pipe(bdev->bd_bh_io_wakeup_fd);
+	pthread_create(&bdev->bd_bh_io_thread, NULL,
+			buffer_io_thread, bdev);
+#endif
 
 	return bdev;
 }
@@ -297,6 +313,29 @@ static int bdev_is_notify_exiting(signed char byte)
 	return 0;
 }
 
+#ifndef USE_AIO
+
+static void bdev_io_thread_notify(struct block_device *bdev)
+{
+	signed char test_byte = 1;
+	write(bdev->bd_bh_io_wakeup_fd[1], &test_byte, sizeof(test_byte));
+}
+
+static void bdev_io_thread_notify_exit(struct block_device *bdev)
+{
+	signed char test_byte = -1;
+	write(bdev->bd_bh_io_wakeup_fd[1], &test_byte, sizeof(test_byte));
+}
+
+static signed char bdev_io_thread_read_notify(struct block_device *bdev)
+{
+	signed char test_byte = 0;
+	read(bdev->bd_bh_io_wakeup_fd[0], &test_byte, sizeof(test_byte));
+	return test_byte;
+}
+
+#endif
+
 
 static int sync_dirty_buffer(struct buffer_head *bh);
 static void detach_bh_from_freelist(struct buffer_head *bh);
@@ -308,6 +347,11 @@ void bdev_free(struct block_device *bdev)
 
 	bdev_writeback_thread_notify_exit(bdev);
 	pthread_join(bdev->bd_bh_writeback_thread, NULL);
+
+#ifndef USE_AIO
+	bdev_io_thread_notify_exit(bdev);
+	pthread_join(bdev->bd_bh_io_thread, NULL);
+#endif
 	
 	while (!list_empty(&bdev->bd_bh_dirty)) {
 		struct buffer_head *cur;
@@ -318,7 +362,7 @@ void bdev_free(struct block_device *bdev)
 	}
 
 	pthread_mutex_lock(&bdev->bd_bh_root_lock);
-	while (node = rb_first(&bdev->bd_bh_root)) {
+	while ((node = rb_first(&bdev->bd_bh_root))) {
 		struct buffer_head *bh = rb_entry(
 		    node, struct buffer_head, b_rb_node);
 		detach_bh_from_freelist(bh);
@@ -330,11 +374,19 @@ void bdev_free(struct block_device *bdev)
 	if (bdev->bd_nr_free != 0)
 		WARNING("bdev->bd_nr_free == %d", bdev->bd_nr_free);
 
+#ifndef USE_AIO
+	close(bdev->bd_bh_io_wakeup_fd[0]);
+	close(bdev->bd_bh_io_wakeup_fd[1]);
+#endif
+
 	close(bdev->bd_bh_writeback_wakeup_fd[0]);
 	close(bdev->bd_bh_writeback_wakeup_fd[1]);
 
 	pthread_mutex_destroy(&bdev->bd_bh_free_lock);
 	pthread_mutex_destroy(&bdev->bd_bh_dirty_lock);
+#ifndef USE_AIO
+	pthread_mutex_destroy(&bdev->bd_bh_ioqueue_lock);
+#endif
 	pthread_mutex_destroy(&bdev->bd_bh_root_lock);
 
 	free(bdev);
@@ -364,11 +416,15 @@ struct buffer_head *buffer_alloc(struct block_device *bdev, uint64_t block,
 	bh->b_count = 0;
 	bh->b_page = NULL;
 
-	bh->b_event = eventfd(1, 0);
+	sem_init(&bh->b_event, 0, 1);
 
 	pthread_mutex_init(&bh->b_lock, NULL);
 	INIT_LIST_HEAD(&bh->b_freelist);
 	INIT_LIST_HEAD(&bh->b_dirty_list);
+
+#ifndef USE_AIO
+	INIT_LIST_HEAD(&bh->b_io_list);
+#endif
 
 	sync_writeback_buffers(bdev);
 
@@ -377,7 +433,7 @@ struct buffer_head *buffer_alloc(struct block_device *bdev, uint64_t block,
 
 static void buffer_free(struct buffer_head *bh)
 {
-	close(bh->b_event);
+	sem_destroy(&bh->b_event);
 	pthread_mutex_destroy(&bh->b_lock);
 
 	if (bh->b_count != 0)
@@ -393,7 +449,7 @@ attach_bh_to_freelist(struct buffer_head *bh)
 	struct block_device *bdev = bh->b_bdev;
 	if (list_empty(&bh->b_freelist)) {
 		pthread_mutex_lock(&bdev->bd_bh_free_lock);
-		list_add(&bh->b_freelist, &bh->b_bdev->bd_bh_free);
+		list_add_tail(&bh->b_freelist, &bh->b_bdev->bd_bh_free);
 		bh->b_bdev->bd_nr_free++;
 		pthread_mutex_unlock(&bdev->bd_bh_free_lock);
 	}
@@ -439,7 +495,7 @@ static void move_buffer_to_writeback(struct buffer_head *bh)
 	struct block_device *bdev = bh->b_bdev;
 	pthread_mutex_lock(&bdev->bd_bh_dirty_lock);
 	if (list_empty(&bh->b_dirty_list)) {
-		list_add(&bh->b_dirty_list, &bh->b_bdev->bd_bh_dirty);
+		list_add_tail(&bh->b_dirty_list, &bh->b_bdev->bd_bh_dirty);
 		buffer_dirty_count++;
 	}
 	pthread_mutex_unlock(&bdev->bd_bh_dirty_lock);
@@ -474,6 +530,38 @@ static void remove_buffer_from_writeback(struct buffer_head *bh)
 	}
 	pthread_mutex_unlock(&bdev->bd_bh_dirty_lock);
 }
+
+#ifndef USE_AIO
+
+static void add_buffer_to_ioqueue(struct buffer_head *bh)
+{
+	struct block_device *bdev = bh->b_bdev;
+	pthread_mutex_lock(&bdev->bd_bh_ioqueue_lock);
+	if (list_empty(&bh->b_io_list))
+		list_add_tail(&bh->b_io_list, &bh->b_bdev->bd_bh_ioqueue);
+
+	pthread_mutex_unlock(&bdev->bd_bh_ioqueue_lock);
+}
+
+static struct buffer_head *
+remove_first_buffer_from_ioqueue(struct block_device *bdev)
+{
+	struct buffer_head *bh;
+
+	pthread_mutex_lock(&bdev->bd_bh_ioqueue_lock);
+	if (list_empty(&bdev->bd_bh_ioqueue)) {
+		pthread_mutex_unlock(&bdev->bd_bh_ioqueue_lock);
+		return NULL;
+	}
+	bh = list_first_entry(&bdev->bd_bh_ioqueue,
+			      struct buffer_head, b_io_list);
+	list_del_init(&bh->b_io_list);
+	pthread_mutex_unlock(&bdev->bd_bh_ioqueue_lock);
+
+	return bh;
+}
+
+#endif
 
 
 static void try_to_drop_buffers(struct block_device *bdev)
@@ -510,13 +598,10 @@ void iocb_dispatch(union sigval value)
 
 void wait_on_buffer(struct buffer_head *bh)
 {
-#ifdef USE_AIO
-	eventfd_t no;
 	/*const struct aiocb const *aiocb_list[2] = {&bh->b_aiocb, NULL};*/
 	/*aio_suspend(aiocb_list, 1, NULL);*/
-	eventfd_read(bh->b_event, &no);
-	eventfd_write(bh->b_event, 1);
-#endif
+	sem_wait(&bh->b_event);
+	sem_post(&bh->b_event);
 }
 
 /*
@@ -525,12 +610,12 @@ void wait_on_buffer(struct buffer_head *bh)
  */
 int __submit_bh(int is_write, struct buffer_head *bh)
 {
-	int ret;
 	struct block_device *bdev = bh->b_bdev;
 
 	if (is_write == 0) {
 #ifndef USE_AIO
-		/*memcpy(bh->b_data, bh->b_page, bh->b_size);*/
+		int ret;
+		sem_wait(&bh->b_event);
 		ret = device_read(bdev->bd_fd, bh->b_blocknr, 1,
 				   bh->b_size, bh->b_data);
 		if (ret < 0)
@@ -538,7 +623,6 @@ int __submit_bh(int is_write, struct buffer_head *bh)
 		else
 			bh->b_end_io(bh, 1);
 #else
-		eventfd_t no;
 		bh->b_aiocb.aio_fildes = bdev->bd_fd;
 		bh->b_aiocb.aio_buf = bh->b_data;
 		bh->b_aiocb.aio_nbytes = bh->b_size;
@@ -547,11 +631,13 @@ int __submit_bh(int is_write, struct buffer_head *bh)
 		bh->b_aiocb.aio_sigevent.sigev_notify = SIGEV_THREAD;
 		bh->b_aiocb.aio_sigevent.sigev_notify_function = iocb_dispatch;
 		bh->b_aiocb.aio_sigevent.sigev_value.sival_ptr = bh;
-		eventfd_read(bh->b_event, &no);
+		sem_wait(&bh->b_event);
 		aio_read(&bh->b_aiocb);
 #endif
 	} else {
 #ifndef USE_AIO
+		int ret;
+		sem_wait(&bh->b_event);
 		ret = device_write(bdev->bd_fd, bh->b_blocknr, 1,
 				   bh->b_size, bh->b_data);
 		if (ret < 0)
@@ -559,7 +645,6 @@ int __submit_bh(int is_write, struct buffer_head *bh)
 		else
 			bh->b_end_io(bh, 1);
 #else
-		eventfd_t no;
 		bh->b_aiocb.aio_fildes = bdev->bd_fd;
 		bh->b_aiocb.aio_buf = bh->b_data;
 		bh->b_aiocb.aio_nbytes = bh->b_size;
@@ -568,7 +653,7 @@ int __submit_bh(int is_write, struct buffer_head *bh)
 		bh->b_aiocb.aio_sigevent.sigev_notify = SIGEV_THREAD;
 		bh->b_aiocb.aio_sigevent.sigev_notify_function = iocb_dispatch;
 		bh->b_aiocb.aio_sigevent.sigev_value.sival_ptr = bh;
-		eventfd_read(bh->b_event, &no);
+		sem_wait(&bh->b_event);
 		aio_write(&bh->b_aiocb);
 #endif
 	}
@@ -578,7 +663,17 @@ int __submit_bh(int is_write, struct buffer_head *bh)
 
 int submit_bh(int is_write, struct buffer_head *bh)
 {
+#ifdef USE_AIO
 	return __submit_bh(is_write, bh);
+#else
+	if (is_write)
+		set_buffer_async_write(bh);
+
+	add_buffer_to_ioqueue(bh);
+	bdev_io_thread_notify(bh->b_bdev);
+	
+	return 0;
+#endif
 }
 
 void after_buffer_sync(struct buffer_head *bh, int uptodate)
@@ -591,7 +686,7 @@ void after_buffer_sync(struct buffer_head *bh, int uptodate)
 	clear_buffer_dirty(bh);
 	attach_bh_to_freelist(bh);
 	unlock_buffer(bh);
-	eventfd_write(bh->b_event, 1);
+	sem_post(&bh->b_event);
 }
 
 void after_submit_read(struct buffer_head *bh, int uptodate)
@@ -601,7 +696,7 @@ void after_submit_read(struct buffer_head *bh, int uptodate)
 
 	put_bh(bh);
 	unlock_buffer(bh);
-	eventfd_write(bh->b_event, 1);
+	sem_post(&bh->b_event);
 }
 
 int bh_submit_read(struct buffer_head *bh)
@@ -701,14 +796,15 @@ static void try_to_sync_buffers(struct block_device *bdev)
 	}
 }
 
-static void *buffer_writeback(void *arg)
+static void *buffer_writeback_thread(void *arg)
 {
-	struct epoll_event epev;
+	struct epoll_event epev = {0};
 	struct block_device *bdev = arg;
-	int epfd = epoll_create(0);
+	int epfd = epoll_create(1);
 	if (epfd < 0)
 		return NULL;
 
+	epev.events = EPOLLIN;
 	epoll_ctl(epfd, EPOLL_CTL_ADD, bdev->bd_bh_writeback_wakeup_fd[0], &epev);
 
 	while (1) {
@@ -728,10 +824,60 @@ static void *buffer_writeback(void *arg)
 			/* just flush out the dirty data. */
 			try_to_sync_buffers(bdev);
 		}
-		if (ret < 0)
+		if (ret < 0 && errno != EINTR)
 			break;
 
 	}
 	close(epfd);
 	return NULL;
 }
+
+#ifndef USE_AIO
+
+static void try_to_perform_io(struct block_device *bdev)
+{
+	while (1) {
+		struct buffer_head *cur;
+		cur = remove_first_buffer_from_ioqueue(bdev);
+		if (cur) {
+			__submit_bh(test_clear_buffer_async_write(cur),
+				    cur);
+		} else
+			break;
+
+	}
+}
+
+static void *buffer_io_thread(void *arg)
+{
+	struct epoll_event epev = {0};
+	struct block_device *bdev = arg;
+	int epfd = epoll_create(1);
+	if (epfd < 0)
+		return NULL;
+
+	epev.events = EPOLLIN;
+	epoll_ctl(epfd, EPOLL_CTL_ADD, bdev->bd_bh_io_wakeup_fd[0], &epev);
+
+	while (1) {
+		int ret;
+		ret = epoll_wait(epfd, &epev, 1, -1);
+		if (ret > 0) {
+			/* We got an nofication. */
+			signed char command;
+			command = bdev_io_thread_read_notify(bdev);
+
+			try_to_perform_io(bdev);
+			if (bdev_is_notify_exiting(command))
+				break;
+
+		}
+		if (ret < 0 && errno != EINTR)
+			break;
+
+	}
+	close(epfd);
+	return NULL;
+}
+
+#endif
