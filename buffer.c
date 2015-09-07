@@ -28,12 +28,11 @@ static int buffer_dirty_threshold = 9;
 static int buffer_dirty_count = 0;
 static int buffer_writeback_ms = 10000;
 
-#ifndef USE_AIO
 /*
  * Pseduo device reading routine.
  * Actually we are reading data from a file.
  */
-static int pread_wrapper(int disk_fd, void *p, size_t size, off_t where)
+int pread_wrapper(int disk_fd, void *p, size_t size, off_t where)
 {
 #if defined(__FreeBSD__) && !defined(__APPLE__)
 	/* FreeBSD needs to read aligned whole blocks.
@@ -88,6 +87,8 @@ static int pread_wrapper(int disk_fd, void *p, size_t size, off_t where)
 	return pread(disk_fd, p, size, where);
 #endif
 }
+
+#ifndef USE_AIO
 
 static int pwrite_wrapper(int disk_fd, const void *p, size_t size, off_t where)
 {
@@ -353,18 +354,11 @@ void bdev_free(struct block_device *bdev)
 	pthread_join(bdev->bd_bh_io_thread, NULL);
 #endif
 	
-	while (!list_empty(&bdev->bd_bh_dirty)) {
-		struct buffer_head *cur;
-		cur = list_first_entry(&bdev->bd_bh_dirty,
-				       struct buffer_head, b_dirty_list);
-		sync_dirty_buffer(cur);
-		wait_on_buffer(cur);
-	}
-
 	pthread_mutex_lock(&bdev->bd_bh_root_lock);
 	while ((node = rb_first(&bdev->bd_bh_root))) {
 		struct buffer_head *bh = rb_entry(
 		    node, struct buffer_head, b_rb_node);
+		wait_on_buffer(bh);
 		detach_bh_from_freelist(bh);
 		__buffer_remove(bdev, bh);
 		buffer_free(bh);
@@ -724,7 +718,6 @@ static int sync_dirty_buffer(struct buffer_head *bh)
 	if (!trylock_buffer(bh))
 		return ret;
 
-	assert(bh->b_count >= 0);
 	if (bh->b_count < 1 && buffer_dirty(bh)) {
 		get_bh(bh);
 		bh->b_end_io = after_buffer_sync;
@@ -766,18 +759,16 @@ void brelse(struct buffer_head *bh)
 	int refcount;
 	if (bh == NULL)
 		return;
-	refcount = bh->b_count;
-	if (refcount > 1)
+	refcount = put_bh_and_read(bh);
+	if (refcount >= 1)
 		goto out;
-	assert(refcount == 1);
+	assert(refcount == 0);
 
 	if (!buffer_dirty(bh))
 		reclaim_buffer(bh);
 	else
 		move_buffer_to_writeback(bh);
 out:
-	put_bh(bh);
-
 	return;
 }
 

@@ -4,8 +4,9 @@
 #include <sys/types.h>
 
 #include "types/ext4_basic.h"
+#include "super.h"
 
-#define PREAD_BLOCK_SIZE 4096
+#define PREAD_BLOCK_SIZE super_block_size()
 
 #define disk_read(__where, __s, __p)        __disk_read(__where, __s, __p, __func__, __LINE__)
 #define disk_write(__where, __s, __p)        __disk_write(__where, __s, __p, __func__, __LINE__)
@@ -31,6 +32,8 @@ struct disk_ctx {
     off_t cur;              /* Current offset */
     size_t size;            /* How much to read */
 };
+
+int pread_wrapper(int disk_fd, void *p, size_t size, off_t where);
 
 int disk_open(const char *path);
 int disk_get_fd();

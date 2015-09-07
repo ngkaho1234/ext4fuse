@@ -93,7 +93,6 @@ void signal_handle_sigsegv(int signal)
 
     for (i = 0; i < size; i++)
         DEBUG("%s", strings[i]);
-    DEBUG("========================= %d items.", size);
     DEBUG("========================================");
 
     abort();
@@ -136,7 +135,7 @@ int main(int argc, char *argv[])
 
     off_t disk_magic_offset = BOOT_SECTOR_SIZE + offsetof(struct ext4_super_block, s_magic);
     uint16_t disk_magic;
-    if (disk_read(disk_magic_offset, sizeof(disk_magic), &disk_magic) < 0) {
+    if (pread_wrapper(disk_get_fd(), &disk_magic, sizeof(disk_magic), disk_magic_offset) < 0) {
         fprintf(stderr, "Failed to read disk: %s\n",  e4f.disk);
         return EXIT_FAILURE;
     }

@@ -12,6 +12,7 @@
 #include <signal.h>
 #endif
 
+#include "common.h"
 #include "types/rbtree.h"
 #include "types/list.h"
 #include "disk.h"
@@ -200,12 +201,17 @@ static inline void unlock_buffer(struct buffer_head *bh)
 
 static inline void get_bh(struct buffer_head *bh)
 {
-	bh->b_count++;
+	__sync_fetch_and_add(&bh->b_count, 1);
 }
 
 static inline void put_bh(struct buffer_head *bh)
 {
-	bh->b_count--;
+	__sync_fetch_and_sub(&bh->b_count, 1);
+}
+
+static inline int put_bh_and_read(struct buffer_head *bh)
+{
+	return __sync_fetch_and_sub(&bh->b_count, 1);
 }
 
 struct buffer_head *__getblk(struct block_device *, uint64_t, int);

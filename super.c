@@ -583,7 +583,7 @@ static uint16_t ext4_gdesc_checksum(ext4_group_t block_group)
 
 int super_fill(void)
 {
-    disk_read(BOOT_SECTOR_SIZE, sizeof(struct ext4_super_block), &super_block);
+    pread_wrapper(disk_get_fd(), &super_block, sizeof(struct ext4_super_block), BOOT_SECTOR_SIZE);
 
     INFO("BLOCK SIZE: %i", super_block_size());
     INFO("BLOCK GROUP SIZE: %i", super_block_group_size());
