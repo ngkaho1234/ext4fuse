@@ -211,7 +211,7 @@ static inline void put_bh(struct buffer_head *bh)
 
 static inline int put_bh_and_read(struct buffer_head *bh)
 {
-	return __sync_fetch_and_sub(&bh->b_count, 1);
+	return __sync_sub_and_fetch(&bh->b_count, 1);
 }
 
 struct buffer_head *__getblk(struct block_device *, uint64_t, int);

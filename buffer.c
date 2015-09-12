@@ -805,11 +805,11 @@ static void *buffer_writeback_thread(void *arg)
 			/* We got an nofication. */
 			signed char command;
 			command = bdev_writeback_thread_read_notify(bdev);
+			try_to_sync_buffers(bdev);
 			if (bdev_is_notify_exiting(command))
 				break;
-			else
-				ret = 0;
-
+			
+			continue;
 		}
 		if (ret == 0) {
 			/* just flush out the dirty data. */
